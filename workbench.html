@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#3aa76d">
+<link rel="icon" href="icons/icon-192.png">
+<script src="data.js"></script>
+<title>我的工作台</title>
+<style>
+  :root{
+    --bg-top:#f0f7f2; --bg-bottom:#f9fcf9; --card:#ffffff;
+    --ink:#24312a; --sub:#7d8a81;
+    --green:#3aa76d; --green-deep:#2e8f5b; --green-soft:#e4f3ea; --green-line:#d3e9dc;
+    --line:#e3ede6; --radius:18px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:linear-gradient(180deg,var(--bg-top),var(--bg-bottom));
+    color:var(--ink);min-height:100vh;
+    padding-bottom:calc(32px + env(safe-area-inset-bottom));
+  }
+  .app{max-width:720px;margin:0 auto;padding:0 16px;}
+
+  /* ===== 顶部 ===== */
+  header{padding:calc(20px + env(safe-area-inset-top)) 0 6px;}
+  .hello-row{display:flex;align-items:center;justify-content:space-between;}
+  .hello h1{font-size:22px;font-weight:800;letter-spacing:.5px;}
+  .hello h1 em{font-style:normal;color:var(--green);}
+  .hello p{font-size:12px;color:var(--sub);margin-top:4px;}
+  .leaf{width:44px;height:44px;border-radius:14px;background:var(--green-soft);
+    display:flex;align-items:center;justify-content:center;font-size:22px;
+    box-shadow:inset 0 0 0 1px var(--green-line);}
+
+  /* ===== 背诵模块大卡 ===== */
+  .recite-card{
+    margin-top:16px;border-radius:22px;padding:22px 20px;color:#fff;
+    background:linear-gradient(135deg,#3aa76d 0%,#57b98b 60%,#79c9a2 100%);
+    box-shadow:0 10px 26px rgba(58,167,109,.28);
+    position:relative;overflow:hidden;
+  }
+  .recite-card::after{content:'';position:absolute;right:-34px;top:-34px;width:120px;height:120px;
+    border-radius:50%;background:rgba(255,255,255,.14);}
+  .recite-card::before{content:'';position:absolute;right:26px;bottom:-46px;width:90px;height:90px;
+    border-radius:50%;background:rgba(255,255,255,.10);}
+  .rc-head{display:flex;align-items:center;gap:12px;position:relative;z-index:1;}
+  .rc-icon{width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.22);
+    display:flex;align-items:center;justify-content:center;font-size:24px;}
+  .rc-title{font-size:18px;font-weight:800;}
+  .rc-sub{font-size:12px;opacity:.85;margin-top:2px;}
+  .rc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:18px 0 16px;position:relative;z-index:1;}
+  .rc-stat{background:rgba(255,255,255,.16);border-radius:14px;padding:12px 6px;text-align:center;}
+  .rc-stat b{display:block;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .rc-stat span{display:block;font-size:11px;opacity:.85;margin-top:3px;}
+  .rc-btn{position:relative;z-index:1;display:block;text-align:center;text-decoration:none;
+    background:#fff;color:var(--green-deep);font-size:15px;font-weight:800;
+    padding:13px 0;border-radius:14px;box-shadow:0 4px 12px rgba(23,74,46,.18);}
+  .rc-btn:active{transform:scale(.98);}
+
+  /* ===== 模块格子 ===== */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;}
+  .mod-card{background:var(--card);border-radius:var(--radius);padding:18px 16px;
+    box-shadow:0 4px 14px rgba(46,94,66,.07);}
+  .mod-icon{width:40px;height:40px;border-radius:12px;background:var(--green-soft);
+    display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px;}
+  .mod-card h3{font-size:15px;font-weight:700;}
+  .mod-card p{font-size:12px;color:var(--sub);margin-top:4px;line-height:1.5;}
+
+  .pending{border:1.5px dashed #b9d8c4;background:rgba(255,255,255,.55);box-shadow:none;}
+  .pending .mod-icon{background:#eef5f0;filter:grayscale(1);opacity:.55;}
+  .pending h3{color:var(--sub);font-weight:600;}
+  .pending p{color:#a9b6ac;}
+
+  footer{text-align:center;color:#a4b3a8;font-size:11px;margin-top:26px;line-height:1.8;}
+
+  @media (min-width:560px){ .rc-stats{gap:12px;} }
+  @media (max-width:430px){
+    .rc-stats{grid-template-columns:repeat(2,1fr);gap:8px;}
+    .rc-stat b{font-size:18px;}
+    .grid{gap:10px;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="hello-row">
+      <div class="hello">
+        <h1>我的<em>工作台</em></h1>
+        <p id="dateLine"></p>
+      </div>
+      <div class="leaf">🌿</div>
+    </div>
+  </header>
+
+  <!-- 模块一：面试背诵 -->
+  <a class="recite-card" href="index.html" style="display:block;text-decoration:none;">
+    <div class="rc-head">
+      <div class="rc-icon">📚</div>
+      <div>
+        <div class="rc-title">面试背诵</div>
+        <div class="rc-sub">三色标记 · 模块筛选 · 背诵/朗读模式</div>
+      </div>
+    </div>
+    <div class="rc-stats">
+      <div class="rc-stat"><b id="stTotal">—</b><span>总题数</span></div>
+      <div class="rc-stat"><b id="stGreen">—</b><span>已掌握</span></div>
+      <div class="rc-stat"><b id="stTodo">—</b><span>待巩固</span></div>
+      <div class="rc-stat"><b id="stToday">—</b><span>今日标记</span></div>
+    </div>
+    <div class="rc-btn">进入背诵 →</div>
+  </a>
+
+  <!-- 后续模块占位 -->
+  <div class="grid">
+    <div class="mod-card pending">
+      <div class="mod-icon">🧩</div>
+      <h3>待定模块</h3>
+      <p>想好了随时加进来</p>
+    </div>
+    <div class="mod-card pending">
+      <div class="mod-icon">🧩</div>
+      <h3>待定模块</h3>
+      <p>想好了随时加进来</p>
+    </div>
+  </div>
+
+  <footer>模块化工作台 · 后续内容持续扩充<br>数据保存在本设备浏览器中</footer>
+
+</div>
+
+<script>
+(function(){
+  // 日期问候
+  var d = new Date();
+  var week = '日一二三四五六'.charAt(d.getDay());
+  var h = d.getHours();
+  var hello = h < 6 ? '夜深了' : h < 11 ? '早上好' : h < 14 ? '中午好' : h < 18 ? '下午好' : '晚上好';
+  document.getElementById('dateLine').textContent =
+    hello + '，' + d.getFullYear() + ' 年 ' + (d.getMonth()+1) + ' 月 ' + d.getDate() + ' 日 · 星期' + week;
+
+  function lsGet(k){
+    try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }catch(e){ return null; }
+  }
+
+  // 背诵统计（无本地数据时回退到内置题库数量）
+  var bank = lsGet('interview_bank_v1') || [];
+  var seed = (typeof SEED_BANK !== 'undefined') ? SEED_BANK.length : 0;
+  var total = bank.length || seed;
+  var green = 0, todo = 0;
+  for (var i = 0; i < bank.length; i++){
+    var s = bank[i].status || 'none';
+    if (s === 'green') green++;
+    else if (s === 'yellow' || s === 'red') todo++;
+  }
+  var t = new Date().toISOString().slice(0,10);
+  var day = lsGet('day_' + t) || {marked:0, reviewed:0};
+
+  document.getElementById('stTotal').textContent = total || '—';
+  document.getElementById('stGreen').textContent = total ? green : '—';
+  document.getElementById('stTodo').textContent  = total ? todo : '—';
+  document.getElementById('stToday').textContent = total ? day.marked : '—';})();
+</script>
+</body>
+</html>
