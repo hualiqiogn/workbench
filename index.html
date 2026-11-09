@@ -209,27 +209,26 @@ body{
   border-radius:12px;
   padding:15px 16px 14px;
 }
-.ans-body{transition:filter .22s ease, opacity .22s ease}
+.ans-body{transition:opacity .18s ease}
 .ans-mask{display:none}
 
-/* 背诵模式：正文遮住，小点标题保留当提示，点一下才显示全文 */
-body.mode-recite .ans-wrap:not(.revealed) .pt-text,
-body.mode-recite .ans-wrap:not(.revealed) .q-note{
-  filter:blur(6px);
-  opacity:.55;
-  user-select:none;
-  pointer-events:none;
+/* 背诵模式：答案整块收起，只留题目 + 一个「点击显示答案」按钮 */
+body.mode-recite .ans-wrap:not(.revealed){
+  background:#fff;
+  border:1px dashed #cfdff2;
+  padding:9px 12px;
 }
+body.mode-recite .ans-wrap:not(.revealed) .ans-body{display:none}
 body.mode-recite .ans-wrap:not(.revealed) .ans-mask{
-  display:flex; position:absolute; inset:0; z-index:3;
+  display:flex; position:static; inset:auto;
   align-items:center; justify-content:center;
-  border-radius:12px; cursor:pointer; background:none;
+  background:none; cursor:pointer;
 }
 .ans-mask span{
-  padding:9px 18px; border-radius:999px;
-  background:#fff; border:1px solid #cfe1f6; color:#2b6ea8;
+  padding:8px 18px; border-radius:999px;
+  background:#f0f6fe; border:1px solid #cfe1f6; color:#2b6ea8;
   font-size:13px; font-weight:800; letter-spacing:.4px;
-  box-shadow:0 2px 12px rgba(40,90,150,.14);
+  box-shadow:0 1px 6px rgba(40,90,150,.08);
 }
 .ans-wrap.revealed .ans-mask{display:none !important}
 
@@ -305,7 +304,7 @@ code{
       <button class="nav-item" data-view="hr"><span class="ic">🤝</span>人事问题<em id="nHr">0</em></button>
     </nav>
     <div class="side-sep">使用提示</div>
-    <div class="side-tip"><b>📖 阅读模式</b>：展开题目直接看答案。<br><b>🎯 背诵模式</b>：答案先遮住，点一下才显示，适合自测。<br>点标题展开收起；小点标题红色，正文加粗，技术名词为行内代码。</div>
+    <div class="side-tip"><b>📖 阅读模式</b>：展开题目直接看答案。<br><b>🎯 背诵模式</b>：展开只显示题目，点「点击显示答案」再看全文，适合自测。<br>点标题展开收起；小点标题红色，正文加粗，技术名词为行内代码。</div>
   </aside>
 
   <main class="content">
