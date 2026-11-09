@@ -1,0 +1,13 @@
+{
+  "name": "面试背诵",
+  "short_name": "面试背诵",
+  "description": "桌面与手机通用的面试题背诵应用",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f4f6fb",
+  "theme_color": "#6b7fae",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
