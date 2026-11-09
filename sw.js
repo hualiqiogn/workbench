@@ -1,5 +1,17 @@
-const CACHE = 'interview-recite-v4';
-const ASSETS = ['./', './index.html', './data.js', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
+const CACHE = 'workbench-v5';
+const ASSETS = [
+  './',
+  './index.html',
+  './data/iv1.js',
+  './data/iv2.js',
+  './data/iv3.js',
+  './data/iv4.js',
+  './data/iv5.js',
+  './data/hr.js',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).catch(() => {}));
