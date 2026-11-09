@@ -136,6 +136,50 @@ body{
   box-shadow:0 1px 3px rgba(24,64,44,.14);
 }
 
+/* ===== 三色标记（背诵用） ===== */
+.marks{display:flex; gap:8px; margin:0 0 12px}
+.mk{
+  flex:1; height:33px; border-radius:10px;
+  border:1px solid transparent; background:#f7faf9; color:#7c8b83;
+  font-family:inherit; font-size:13px; font-weight:800; letter-spacing:.3px;
+  cursor:pointer; transition:.15s;
+}
+.mk-red{background:#fdeeee; color:#c94a4a; border-color:#f7d6d6}
+.mk-yellow{background:#fdf7e8; color:#a9770a; border-color:#f4e2bb}
+.mk-green{background:#eaf8f0; color:#1f7a4f; border-color:#cdebda}
+.mk:hover{transform:translateY(-1px)}
+.mk:active{transform:scale(.98)}
+.mk-red.on{background:#d9534f; border-color:#d9534f; color:#fff; box-shadow:0 2px 9px rgba(217,83,79,.28)}
+.mk-yellow.on{background:#e0a723; border-color:#e0a723; color:#fff; box-shadow:0 2px 9px rgba(224,167,35,.28)}
+.mk-green.on{background:#2f9e68; border-color:#2f9e68; color:#fff; box-shadow:0 2px 9px rgba(47,158,104,.28)}
+
+.q-dot{
+  flex:0 0 auto; width:8px; height:8px; border-radius:50%;
+  margin-top:9px; background:#fff; border:1px solid #dde8f3;
+}
+.q-dot.red{background:#d9534f; border-color:#d9534f}
+.q-dot.yellow{background:#e0a723; border-color:#e0a723}
+.q-dot.green{background:#2f9e68; border-color:#2f9e68}
+
+/* ===== 筛选 + 统计 ===== */
+.filters{display:flex; align-items:center; gap:7px; flex-wrap:wrap; padding:0 4px 10px}
+.fchip{
+  height:28px; padding:0 12px; border-radius:999px;
+  border:1px solid var(--line); background:#fff; color:var(--ink-2);
+  font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer; transition:.15s;
+}
+.fchip:hover{border-color:#bfe4d2; color:var(--green-d)}
+.fchip.on{
+  background:linear-gradient(135deg,#e9f8ef,#f4fdf8);
+  border-color:#cdebda; color:var(--green-d);
+  box-shadow:0 1px 2px rgba(24,64,44,.05);
+}
+.fchip em{font-style:normal; font-size:11px; opacity:.7; margin-left:3px}
+.fstat{margin-left:auto; font-size:12px; font-weight:700; color:var(--muted); white-space:nowrap}
+.fstat b{color:var(--green-d)}
+.fbar{margin:0 4px 8px; height:4px; border-radius:999px; background:#edf3f0; overflow:hidden}
+.fbar i{display:block; height:100%; width:0; border-radius:999px; background:linear-gradient(90deg,#5ccf95,#2f9e68); transition:width .35s ease}
+
 .mod{
   display:flex; align-items:center; gap:10px;
   margin:22px 2px 12px;
@@ -320,6 +364,15 @@ code{
         <button class="tbtn" id="collapseAll">全部收起</button>
       </div>
     </div>
+    <div class="filters" id="filters">
+      <button class="fchip on" data-f="all">全部</button>
+      <button class="fchip" data-f="none">未标记</button>
+      <button class="fchip" data-f="green">已掌握</button>
+      <button class="fchip" data-f="yellow">不熟练</button>
+      <button class="fchip" data-f="red">没印象</button>
+      <span class="fstat" id="fStat"></span>
+    </div>
+    <div class="fbar"><i id="fBar"></i></div>
     <div id="list"></div>
   </main>
 </div>
@@ -375,7 +428,20 @@ code{
     arr.forEach(function(it,i){ it.no = i + 1; });
   }
 
-  var state = { view:"interview", kw:"", mode:"read" };
+  var state = { view:"interview", kw:"", mode:"read", filter:"all" };
+
+  /* ================= 三色标记（已掌握 / 不熟练 / 没印象） ================= */
+  var MARK_KEY = "wb_marks";
+  var marks = {};
+  try { marks = JSON.parse(localStorage.getItem(MARK_KEY) || "{}") || {}; } catch(e){ marks = {}; }
+
+  function markKey(it, isIV){ return (isIV ? "iv" : "hr") + "|" + it.title; }
+  function getMark(it, isIV){ return marks[markKey(it, isIV)] || "none"; }
+  function setMark(it, isIV, st){
+    var k = markKey(it, isIV);
+    if (!st || st === "none") delete marks[k]; else marks[k] = st;
+    try { localStorage.setItem(MARK_KEY, JSON.stringify(marks)); } catch(e){}
+  }
 
   function pad(n){ return n < 10 ? "0" + n : String(n); }
 
@@ -409,10 +475,20 @@ code{
             + '<div class="pt-text">' + rich(parts[i].text) + '</div></div>';
     }
     if (it.note) body += '<div class="q-note">' + rich(it.note) + '</div>';
-    return '<article class="q" id="q-' + it.no + '">'
-         +   '<div class="q-head"><span class="q-no">' + pad(it.no) + '</span>'
+
+    var st = getMark(it, isIV);
+    var mk = '<div class="marks">'
+      + '<button class="mk mk-red'    + (st === "red"    ? " on" : "") + '" data-st="red">没印象</button>'
+      + '<button class="mk mk-yellow' + (st === "yellow" ? " on" : "") + '" data-st="yellow">不熟练</button>'
+      + '<button class="mk mk-green'  + (st === "green"  ? " on" : "") + '" data-st="green">已掌握</button>'
+      + '</div>';
+
+    return '<article class="q" id="q-' + it.no + '" data-st="' + st + '">'
+         +   '<div class="q-head">'
+         +     '<span class="q-dot' + (st === "none" ? "" : " " + st) + '"></span>'
+         +     '<span class="q-no">' + pad(it.no) + '</span>'
          +     '<h3 class="q-title">' + esc(it.title) + '</h3><span class="q-chev">›</span></div>'
-         +   '<div class="q-body">'
+         +   '<div class="q-body">' + mk
          +     '<div class="ans-wrap">'
          +       '<div class="ans-mask"><span>👁 点击显示答案</span></div>'
          +       '<div class="ans-body">' + body + '</div>'
@@ -425,20 +501,49 @@ code{
     var isIV = state.view === "interview";
     var arr = isIV ? IV : HR;
     var key = isIV ? "module" : "group";
-    var html = "", cur = null, shown = 0;
+    var vis = [];
     for (var i=0;i<arr.length;i++){
       var it = arr[i];
       if (state.kw && !(isIV ? hitIV(it) : hitHR(it))) continue;
+      if (state.filter !== "all" && getMark(it, isIV) !== state.filter) continue;
+      vis.push(it);
+    }
+    var html = "", cur = null, n = 0;
+    for (var i=0;i<vis.length;i++){
+      var it = vis[i];
       if (it[key] !== cur){
         cur = it[key];
-        var n = 0;
-        for (var j=0;j<arr.length;j++) if (arr[j][key] === cur) n++;
+        n = 0;
+        for (var j=0;j<vis.length;j++) if (vis[j][key] === cur) n++;
         html += '<div class="mod">' + esc(cur) + '<span class="cnt">' + n + ' 题</span></div>';
       }
       html += card(it, isIV);
-      shown++;
     }
-    return shown ? html : '<div class="empty">没有匹配的题目，换个关键词试试</div>';
+    if (!vis.length) return '<div class="empty">' + (state.filter !== "all"
+      ? "这个标记下还没有题，先去背几道再来"
+      : "没有匹配的题目，换个关键词试试") + '</div>';
+    return html;
+  }
+
+  function updateStat(){
+    var isIV = state.view === "interview";
+    var arr = isIV ? IV : HR;
+    var c = { green:0, yellow:0, red:0, none:0 };
+    for (var i=0;i<arr.length;i++){
+      var st = getMark(arr[i], isIV);
+      c[st] = (c[st] || 0) + 1;
+    }
+    document.getElementById("fStat").innerHTML =
+      "已掌握 <b>" + c.green + "</b> · 不熟练 " + c.yellow + " · 没印象 " + c.red + " · 剩 " + c.none;
+    document.getElementById("fBar").style.width =
+      (arr.length ? (c.green / arr.length * 100) : 0) + "%";
+    var chips = document.querySelectorAll(".fchip");
+    for (var j=0;j<chips.length;j++){
+      var f = chips[j].getAttribute("data-f");
+      var em = chips[j].querySelector("em");
+      if (!em){ em = document.createElement("em"); chips[j].appendChild(em); }
+      em.textContent = (f === "all") ? arr.length : (c[f] || 0);
+    }
   }
 
   function render(){
@@ -451,6 +556,7 @@ code{
       ? IV.length + " 题 / " + distinct(IV,"module") + " 模块"
       : HR.length + " 题";
     document.getElementById("list").innerHTML = build();
+    updateStat();
     var heads = document.querySelectorAll(".q-head");
     for (var i=0;i<heads.length;i++){
       heads[i].onclick = function(){ this.parentNode.classList.toggle("open"); };
@@ -485,13 +591,67 @@ code{
     modeBtns[mi].onclick = function(){ applyMode(this.getAttribute("data-mode")); };
   }
 
-  document.getElementById("list").addEventListener("click", function(e){
-    var t = e.target;
-    while (t && t !== this && !(t.className && String(t.className).indexOf("ans-mask") >= 0)) t = t.parentNode;
-    if (t && t !== this && t.className && String(t.className).indexOf("ans-mask") >= 0){
-      t.parentNode.classList.add("revealed");
-      e.stopPropagation();
+  function nearest(el, root, cls){
+    while (el && el !== root){
+      if (el.classList && el.classList.contains(cls)) return el;
+      el = el.parentNode;
     }
+    return null;
+  }
+
+  /* 标记后：背诵模式自动收起本题、展开下一题（跟旧版翻页一个节奏） */
+  function goNext(el){
+    el.classList.remove("open");
+    var nx = el.nextElementSibling;
+    while (nx && !(nx.classList && nx.classList.contains("q"))) nx = nx.nextElementSibling;
+    if (nx){
+      nx.classList.add("open");
+      nx.scrollIntoView({ block:"center", behavior:"smooth" });
+    }
+  }
+
+  document.getElementById("list").addEventListener("click", function(e){
+    var root = this;
+
+    /* 点遮罩显示答案 */
+    var mask = nearest(e.target, root, "ans-mask");
+    if (mask){
+      mask.parentNode.classList.add("revealed");
+      e.stopPropagation();
+      return;
+    }
+
+    /* 三色标记 */
+    var btn = nearest(e.target, root, "mk");
+    if (!btn) return;
+    e.stopPropagation();
+
+    var cardEl = nearest(btn, root, "q");
+    if (!cardEl) return;
+
+    var isIV = state.view === "interview";
+    var arr = isIV ? IV : HR;
+    var no = parseInt(String(cardEl.id).replace("q-", ""), 10);
+    var item = null;
+    for (var i=0;i<arr.length;i++) if (arr[i].no === no){ item = arr[i]; break; }
+    if (!item) return;
+
+    var st = btn.getAttribute("data-st");
+    var next = (getMark(item, isIV) === st) ? "none" : st;
+    setMark(item, isIV, next);
+
+    var btns = cardEl.querySelectorAll(".mk");
+    for (var k=0;k<btns.length;k++){
+      btns[k].classList.toggle("on", next !== "none" && btns[k].getAttribute("data-st") === next);
+    }
+    cardEl.setAttribute("data-st", next);
+    var dot = cardEl.querySelector(".q-dot");
+    if (dot) dot.className = "q-dot" + (next === "none" ? "" : " " + next);
+
+    updateStat();
+
+    if (state.filter !== "all"){ render(); return; }
+    if (state.mode === "recite" && next !== "none") goNext(cardEl);
   });
 
   var savedMode = "read";
@@ -506,7 +666,22 @@ code{
       this.classList.add("active");
       state.view = this.getAttribute("data-view");
       state.kw = "";
+      state.filter = "all";
       document.getElementById("q").value = "";
+      var fcs = document.querySelectorAll(".fchip");
+      for (var f=0;f<fcs.length;f++) fcs[f].classList.toggle("on", fcs[f].getAttribute("data-f") === "all");
+      render();
+      window.scrollTo({top:0, behavior:"smooth"});
+    };
+  }
+
+  /* 筛选：全部 / 未标记 / 已掌握 / 不熟练 / 没印象 */
+  var fchips = document.querySelectorAll(".fchip");
+  for (var fi=0; fi<fchips.length; fi++){
+    fchips[fi].onclick = function(){
+      for (var j=0;j<fchips.length;j++) fchips[j].classList.remove("on");
+      this.classList.add("on");
+      state.filter = this.getAttribute("data-f");
       render();
       window.scrollTo({top:0, behavior:"smooth"});
     };
