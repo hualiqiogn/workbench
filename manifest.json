@@ -1,11 +1,11 @@
 {
-  "name": "面试背诵",
-  "short_name": "面试背诵",
-  "description": "桌面与手机通用的面试题背诵应用",
+  "name": "大帅比工作台",
+  "short_name": "工作台",
+  "description": "面试问题 + 人事问题，随时背",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f4f6fb",
-  "theme_color": "#6b7fae",
+  "background_color": "#f6fbf8",
+  "theme_color": "#2f9e68",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
