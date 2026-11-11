@@ -345,10 +345,11 @@ code{
   <aside class="sidebar">
     <nav class="nav">
       <button class="nav-item active" data-view="interview"><span class="ic">📘</span>面试问题<em id="nIv">0</em></button>
+      <button class="nav-item" data-view="project"><span class="ic">🏗️</span>项目问题<em id="nPj">0</em></button>
       <button class="nav-item" data-view="hr"><span class="ic">🤝</span>人事问题<em id="nHr">0</em></button>
     </nav>
     <div class="side-sep">使用提示</div>
-    <div class="side-tip"><b>📖 阅读模式</b>：展开题目直接看答案。<br><b>🎯 背诵模式</b>：展开只显示题目，点「点击显示答案」再看全文，适合自测。<br>点标题展开收起；小点标题红色，正文加粗，技术名词为行内代码。</div>
+    <div class="side-tip"><b>📖 阅读模式</b>：展开题目直接看答案。<br><b>🎯 背诵模式</b>：展开只显示题目，点「点击显示答案」再看全文，适合自测。<br><b>🏗️ 项目问题</b>：五个简历亮点的三层答法，附「报菜单」话术。<br>点标题展开收起；小点标题红色，正文加粗，技术名词为行内代码。</div>
   </aside>
 
   <main class="content">
@@ -382,16 +383,27 @@ code{
 <script src="data/iv3.js"></script>
 <script src="data/iv4.js"></script>
 <script src="data/iv5.js"></script>
+<script src="data/pj.js"></script>
 <script src="data/hr.js"></script>
 <script>
 (function(){
   "use strict";
 
   var IV = window.__IV || [];
+  var PJ = window.__PJ || [];
   var HR = window.__HR || [];
 
   var MOD_ORDER = ["Java基础","Java高级","Java集合","多线程","框架","SQL","MySQL","Redis","前端","反射","工具","Linux","场景题","SpringAI"];
-  var HR_ORDER  = ["人事题","项目问题","求职场景"];
+  var PJ_ORDER  = ["项目介绍","难点深挖","简历亮点 · 三层结构","答题策略"];
+  var HR_ORDER  = ["人事题","求职场景"];
+
+  /* 三个栏目的统一配置：key=分组字段，points=是否为「points」结构 */
+  var VIEWS = {
+    interview: { data: IV, key: "module", order: MOD_ORDER, title: "面试问题", unit: "个模块", points: true },
+    project:   { data: PJ, key: "group",  order: PJ_ORDER,  title: "项目问题", unit: "类",     points: false },
+    hr:        { data: HR, key: "group",  order: HR_ORDER,  title: "人事问题", unit: "类",     points: false }
+  };
+  function cur(){ return VIEWS[state.view] || VIEWS.interview; }
 
   function esc(s){
     return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
@@ -435,48 +447,45 @@ code{
   var marks = {};
   try { marks = JSON.parse(localStorage.getItem(MARK_KEY) || "{}") || {}; } catch(e){ marks = {}; }
 
-  function markKey(it, isIV){ return (isIV ? "iv" : "hr") + "|" + it.title; }
-  function getMark(it, isIV){ return marks[markKey(it, isIV)] || "none"; }
-  function setMark(it, isIV, st){
-    var k = markKey(it, isIV);
+  /* 标记按题目名存，跨栏目搬题不会丢；兼容旧的 iv| / hr| 键 */
+  function getMark(it){
+    var t = it.title;
+    return marks["q|" + t] || marks["iv|" + t] || marks["hr|" + t] || "none";
+  }
+  function setMark(it, st){
+    var t = it.title, k = "q|" + t;
+    delete marks["iv|" + t];
+    delete marks["hr|" + t];
     if (!st || st === "none") delete marks[k]; else marks[k] = st;
     try { localStorage.setItem(MARK_KEY, JSON.stringify(marks)); } catch(e){}
   }
 
   function pad(n){ return n < 10 ? "0" + n : String(n); }
 
-  function hitIV(it){
+  function hit(it){
     var k = state.kw;
     if ((it.title||"").toLowerCase().indexOf(k) >= 0) return true;
     if ((it.module||"").toLowerCase().indexOf(k) >= 0) return true;
-    if (it.points) for (var i=0;i<it.points.length;i++){
-      if ((it.points[i].text||"").toLowerCase().indexOf(k) >= 0) return true;
-      if ((it.points[i].label||"").toLowerCase().indexOf(k) >= 0) return true;
-    }
-    if ((it.note||"").toLowerCase().indexOf(k) >= 0) return true;
-    return false;
-  }
-  function hitHR(it){
-    var k = state.kw;
-    if ((it.title||"").toLowerCase().indexOf(k) >= 0) return true;
-    if (it.blocks) for (var i=0;i<it.blocks.length;i++){
-      if ((it.blocks[i].text||"").toLowerCase().indexOf(k) >= 0) return true;
-      if ((it.blocks[i].label||"").toLowerCase().indexOf(k) >= 0) return true;
+    if ((it.group||"").toLowerCase().indexOf(k) >= 0) return true;
+    var ps = it.points || it.blocks || [];
+    for (var i=0;i<ps.length;i++){
+      if ((ps[i].text||"").toLowerCase().indexOf(k) >= 0) return true;
+      if ((ps[i].label||"").toLowerCase().indexOf(k) >= 0) return true;
     }
     if ((it.note||"").toLowerCase().indexOf(k) >= 0) return true;
     return false;
   }
 
-  function card(it, isIV){
+  function card(it){
     var body = "";
-    var parts = isIV ? (it.points || []) : (it.blocks || []);
+    var parts = it.points || it.blocks || [];
     for (var i=0;i<parts.length;i++){
       body += '<div class="pt"><span class="pt-label">' + esc(parts[i].label || "") + '</span>'
             + '<div class="pt-text">' + rich(parts[i].text) + '</div></div>';
     }
     if (it.note) body += '<div class="q-note">' + rich(it.note) + '</div>';
 
-    var st = getMark(it, isIV);
+    var st = getMark(it);
     var mk = '<div class="marks">'
       + '<button class="mk mk-red'    + (st === "red"    ? " on" : "") + '" data-st="red">没印象</button>'
       + '<button class="mk mk-yellow' + (st === "yellow" ? " on" : "") + '" data-st="yellow">不熟练</button>'
@@ -498,26 +507,25 @@ code{
   }
 
   function build(){
-    var isIV = state.view === "interview";
-    var arr = isIV ? IV : HR;
-    var key = isIV ? "module" : "group";
+    var v = cur();
+    var arr = v.data, key = v.key;
     var vis = [];
     for (var i=0;i<arr.length;i++){
       var it = arr[i];
-      if (state.kw && !(isIV ? hitIV(it) : hitHR(it))) continue;
-      if (state.filter !== "all" && getMark(it, isIV) !== state.filter) continue;
+      if (state.kw && !hit(it)) continue;
+      if (state.filter !== "all" && getMark(it) !== state.filter) continue;
       vis.push(it);
     }
-    var html = "", cur = null, n = 0;
+    var html = "", grp = null, n = 0;
     for (var i=0;i<vis.length;i++){
       var it = vis[i];
-      if (it[key] !== cur){
-        cur = it[key];
+      if (it[key] !== grp){
+        grp = it[key];
         n = 0;
-        for (var j=0;j<vis.length;j++) if (vis[j][key] === cur) n++;
-        html += '<div class="mod">' + esc(cur) + '<span class="cnt">' + n + ' 题</span></div>';
+        for (var j=0;j<vis.length;j++) if (vis[j][key] === grp) n++;
+        html += '<div class="mod">' + esc(grp) + '<span class="cnt">' + n + ' 题</span></div>';
       }
-      html += card(it, isIV);
+      html += card(it);
     }
     if (!vis.length) return '<div class="empty">' + (state.filter !== "all"
       ? "这个标记下还没有题，先去背几道再来"
@@ -526,11 +534,10 @@ code{
   }
 
   function updateStat(){
-    var isIV = state.view === "interview";
-    var arr = isIV ? IV : HR;
+    var arr = cur().data;
     var c = { green:0, yellow:0, red:0, none:0 };
     for (var i=0;i<arr.length;i++){
-      var st = getMark(arr[i], isIV);
+      var st = getMark(arr[i]);
       c[st] = (c[st] || 0) + 1;
     }
     document.getElementById("fStat").innerHTML =
@@ -547,14 +554,13 @@ code{
   }
 
   function render(){
-    var isIV = state.view === "interview";
-    document.getElementById("vTitle").textContent = isIV ? "面试问题" : "人事问题";
-    document.getElementById("vSub").textContent = isIV
-      ? "共 " + IV.length + " 题 · " + distinct(IV,"module") + " 个模块"
-      : "共 " + HR.length + " 题 · " + distinct(HR,"group") + " 类";
-    document.getElementById("cntHint").textContent = isIV
-      ? IV.length + " 题 / " + distinct(IV,"module") + " 模块"
-      : HR.length + " 题";
+    var v = cur();
+    document.getElementById("vTitle").textContent = v.title;
+    document.getElementById("vSub").textContent =
+      "共 " + v.data.length + " 题 · " + distinct(v.data, v.key) + " " + v.unit;
+    document.getElementById("cntHint").textContent = v.points
+      ? v.data.length + " 题 / " + distinct(v.data, v.key) + " 模块"
+      : v.data.length + " 题";
     document.getElementById("list").innerHTML = build();
     updateStat();
     var heads = document.querySelectorAll(".q-head");
@@ -629,16 +635,15 @@ code{
     var cardEl = nearest(btn, root, "q");
     if (!cardEl) return;
 
-    var isIV = state.view === "interview";
-    var arr = isIV ? IV : HR;
+    var arr = cur().data;
     var no = parseInt(String(cardEl.id).replace("q-", ""), 10);
     var item = null;
     for (var i=0;i<arr.length;i++) if (arr[i].no === no){ item = arr[i]; break; }
     if (!item) return;
 
     var st = btn.getAttribute("data-st");
-    var next = (getMark(item, isIV) === st) ? "none" : st;
-    setMark(item, isIV, next);
+    var next = (getMark(item) === st) ? "none" : st;
+    setMark(item, next);
 
     var btns = cardEl.querySelectorAll(".mk");
     for (var k=0;k<btns.length;k++){
@@ -675,6 +680,15 @@ code{
     };
   }
 
+  /* 支持 ?view=project 直达某个栏目 */
+  var vm = location.search.match(/view=(interview|project|hr)/);
+  if (vm){
+    state.view = vm[1];
+    for (var vi=0;vi<navBtns.length;vi++){
+      navBtns[vi].classList.toggle("active", navBtns[vi].getAttribute("data-view") === state.view);
+    }
+  }
+
   /* 筛选：全部 / 未标记 / 已掌握 / 不熟练 / 没印象 */
   var fchips = document.querySelectorAll(".fchip");
   for (var fi=0; fi<fchips.length; fi++){
@@ -704,8 +718,10 @@ code{
   };
 
   sortBy(IV, "module", MOD_ORDER);
+  sortBy(PJ, "group", PJ_ORDER);
   sortBy(HR, "group", HR_ORDER);
   document.getElementById("nIv").textContent = IV.length;
+  document.getElementById("nPj").textContent = PJ.length;
   document.getElementById("nHr").textContent = HR.length;
   render();
   applyMode((/openall/.test(location.search) && !/mode=/.test(location.search)) ? "read" : savedMode, true);
