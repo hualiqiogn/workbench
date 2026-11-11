@@ -1,4 +1,4 @@
-const CACHE = 'workbench-v10';
+const CACHE = 'workbench-v11';
 const ASSETS = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const ASSETS = [
   './data/iv3.js',
   './data/iv4.js',
   './data/iv5.js',
+  './data/pj.js',
   './data/hr.js',
   './manifest.json',
   './icons/icon-192.png',
