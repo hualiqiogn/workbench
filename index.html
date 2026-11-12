@@ -347,9 +347,10 @@ code{
       <button class="nav-item active" data-view="interview"><span class="ic">📘</span>面试问题<em id="nIv">0</em></button>
       <button class="nav-item" data-view="project"><span class="ic">🏗️</span>项目问题<em id="nPj">0</em></button>
       <button class="nav-item" data-view="hr"><span class="ic">🤝</span>人事问题<em id="nHr">0</em></button>
+      <button class="nav-item" data-view="boss"><span class="ic">💬</span>招聘回答<em id="nBoss">0</em></button>
     </nav>
     <div class="side-sep">使用提示</div>
-    <div class="side-tip"><b>📖 阅读模式</b>：展开题目直接看答案。<br><b>🎯 背诵模式</b>：展开只显示题目，点「点击显示答案」再看全文，适合自测。<br><b>🏗️ 项目问题</b>：五个简历亮点的三层答法，附「报菜单」话术。<br>点标题展开收起；小点标题红色，正文加粗，技术名词为行内代码。</div>
+    <div class="side-tip"><b>📖 阅读模式</b>：展开题目直接看答案。<br><b>🎯 背诵模式</b>：展开只显示题目，点「点击显示答案」再看全文，适合自测。<br><b>🏗️ 项目问题</b>：MES / RAG 两个项目分开放，五条亮点是三层答法。<br><b>💬 招聘回答</b>：BOSS 上的开场问题，按情况给答法。<br>点标题展开收起；小点标题红色，正文加粗，技术名词为行内代码。</div>
   </aside>
 
   <main class="content">
@@ -385,6 +386,7 @@ code{
 <script src="data/iv5.js"></script>
 <script src="data/pj.js"></script>
 <script src="data/hr.js"></script>
+<script src="data/boss.js"></script>
 <script>
 (function(){
   "use strict";
@@ -392,16 +394,19 @@ code{
   var IV = window.__IV || [];
   var PJ = window.__PJ || [];
   var HR = window.__HR || [];
+  var BOSS = window.__BOSS || [];
 
   var MOD_ORDER = ["Java基础","Java高级","Java集合","多线程","框架","SQL","MySQL","Redis","前端","反射","工具","Linux","场景题","SpringAI"];
-  var PJ_ORDER  = ["项目介绍","难点深挖","简历亮点 · 三层结构","答题策略"];
+  var PJ_ORDER  = ["MES 项目","RAG 项目","答题策略"];
   var HR_ORDER  = ["人事题","求职场景"];
+  var BOSS_ORDER = ["BOSS 沟通"];
 
-  /* 三个栏目的统一配置：key=分组字段，points=是否为「points」结构 */
+  /* 各栏目的统一配置：key=分组字段，points=是否为「points」结构 */
   var VIEWS = {
-    interview: { data: IV, key: "module", order: MOD_ORDER, title: "面试问题", unit: "个模块", points: true },
-    project:   { data: PJ, key: "group",  order: PJ_ORDER,  title: "项目问题", unit: "类",     points: false },
-    hr:        { data: HR, key: "group",  order: HR_ORDER,  title: "人事问题", unit: "类",     points: false }
+    interview: { data: IV,   key: "module", order: MOD_ORDER,  title: "面试问题", unit: "个模块", points: true },
+    project:   { data: PJ,   key: "group",  order: PJ_ORDER,   title: "项目问题", unit: "类",     points: false },
+    hr:        { data: HR,   key: "group",  order: HR_ORDER,   title: "人事问题", unit: "类",     points: false },
+    boss:      { data: BOSS, key: "group",  order: BOSS_ORDER, title: "招聘回答", unit: "类",     points: false }
   };
   function cur(){ return VIEWS[state.view] || VIEWS.interview; }
 
@@ -681,7 +686,7 @@ code{
   }
 
   /* 支持 ?view=project 直达某个栏目 */
-  var vm = location.search.match(/view=(interview|project|hr)/);
+  var vm = location.search.match(/view=(interview|project|hr|boss)/);
   if (vm){
     state.view = vm[1];
     for (var vi=0;vi<navBtns.length;vi++){
@@ -720,9 +725,11 @@ code{
   sortBy(IV, "module", MOD_ORDER);
   sortBy(PJ, "group", PJ_ORDER);
   sortBy(HR, "group", HR_ORDER);
+  sortBy(BOSS, "group", BOSS_ORDER);
   document.getElementById("nIv").textContent = IV.length;
   document.getElementById("nPj").textContent = PJ.length;
   document.getElementById("nHr").textContent = HR.length;
+  document.getElementById("nBoss").textContent = BOSS.length;
   render();
   applyMode((/openall/.test(location.search) && !/mode=/.test(location.search)) ? "read" : savedMode, true);
 
