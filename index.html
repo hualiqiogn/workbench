@@ -119,6 +119,10 @@ body{
   transition:.15s;
 }
 .tbtn:hover{border-color:#bfe4d2; color:var(--green-d); background:#f6fcf9}
+.tbtn.on{
+  background:linear-gradient(135deg,#e9f8ef,#f4fdf8);
+  border-color:#9ed8b8; color:var(--green-d);
+}
 
 .modes{
   display:flex; gap:4px; padding:3px;
@@ -179,6 +183,37 @@ body{
 .fstat b{color:var(--green-d)}
 .fbar{margin:0 4px 8px; height:4px; border-radius:999px; background:#edf3f0; overflow:hidden}
 .fbar i{display:block; height:100%; width:0; border-radius:999px; background:linear-gradient(90deg,#5ccf95,#2f9e68); transition:width .35s ease}
+
+/* ===== 编辑模式（点文字直接改，自动存本机） ===== */
+.edit-tip{
+  margin:0 2px 10px; padding:8px 12px;
+  border:1px dashed #cfe6da; border-radius:9px;
+  background:#f7fdfa; color:#3d6b55;
+  font-size:12.5px; font-weight:600; line-height:1.7;
+}
+.edit-tip b{color:var(--green-d)}
+body.editing .q-title,
+body.editing .pt-label,
+body.editing .pt-text,
+body.editing .q-note{
+  outline:1px dashed #cfe0f5;
+  outline-offset:2px;
+  border-radius:4px;
+  cursor:text;
+  transition:background .15s, outline-color .15s;
+}
+body.editing .q-title:hover,
+body.editing .pt-label:hover,
+body.editing .pt-text:hover,
+body.editing .q-note:hover{background:#fafdff}
+body.editing .q-title:focus,
+body.editing .pt-label:focus,
+body.editing .pt-text:focus,
+body.editing .q-note:focus{
+  outline:2px solid #8fbfe8;
+  background:#fff;
+}
+body.editing .q-chev{cursor:pointer; opacity:.75}
 
 .mod{
   display:flex; align-items:center; gap:10px;
@@ -348,7 +383,7 @@ code{
       <button class="nav-item" data-view="boss"><span class="ic">💬</span>招聘回答<em id="nBoss">0</em></button>
     </nav>
     <div class="side-sep">使用提示</div>
-    <div class="side-tip"><b>📖 阅读模式</b>：展开题目直接看答案。<br><b>🎯 背诵模式</b>：展开只显示题目，点「点击显示答案」再看全文，适合自测。<br><b>🏗️ 项目问题</b>：MES / RAG 两个项目分开放，五条亮点是三层答法。<br><b>💬 招聘回答</b>：BOSS 上的开场问题，按情况给答法。<br>点标题展开收起；小点标题红色，技术名词为行内代码。</div>
+    <div class="side-tip"><b>📖 阅读模式</b>：展开题目直接看答案。<br><b>🎯 背诵模式</b>：展开只显示题目，点「点击显示答案」再看全文，适合自测。<br><b>🏗️ 项目问题</b>：MES / RAG 两个项目分开放，五条亮点是三层答法。<br><b>💬 招聘回答</b>：BOSS 上的开场问题，按情况给答法。<br>点标题展开收起；小点标题红色，技术名词为行内代码。<br><b>✏️ 编辑</b>：遇到错别字点「编辑」直接改，自动保存在本机。</div>
   </aside>
 
   <main class="content">
@@ -362,8 +397,12 @@ code{
         </div>
         <button class="tbtn" id="expandAll">全部展开</button>
         <button class="tbtn" id="collapseAll">全部收起</button>
+        <button class="tbtn" id="editBtn">✏️ 编辑</button>
+        <button class="tbtn" id="exportBtn" hidden>⬇ 导出修改</button>
+        <button class="tbtn" id="resetBtn" hidden>↺ 还原原文</button>
       </div>
     </div>
+    <div class="edit-tip" id="editTip" hidden>✏️ <b>编辑模式</b>：点任意文字直接改，自动保存在本机（刷新不丢）；「⬇ 导出修改」可把改好的内容导出来。</div>
     <div class="filters" id="filters">
       <button class="fchip on" data-f="all">全部</button>
       <button class="fchip" data-f="none">未标记</button>
@@ -408,6 +447,52 @@ code{
   };
   function cur(){ return VIEWS[state.view] || VIEWS.interview; }
 
+  /* ================= 本地修改（错别字自己改，存本机） ================= */
+  var EDIT_KEY = "wb_edits";
+  var edits = {};
+  try { edits = JSON.parse(localStorage.getItem(EDIT_KEY) || "{}") || {}; } catch(e){ edits = {}; }
+
+  function saveEdits(){
+    try { localStorage.setItem(EDIT_KEY, JSON.stringify(edits)); } catch(e){}
+  }
+
+  /* 给每题一个稳定 id（栏目#原始下标），并把本地改动合并进数据 */
+  (function(){
+    Object.keys(VIEWS).forEach(function(v){
+      VIEWS[v].data.forEach(function(it, i){
+        it.__k = v + "#" + i;
+        it.__origTitle = it.title;
+      });
+    });
+    Object.keys(VIEWS).forEach(function(v){
+      VIEWS[v].data.forEach(function(it){
+        var e = edits[it.__k];
+        if (!e) return;
+        if (e.title) it.title = e.title;
+        if (e.note) it.note = e.note;
+        var parts = it.points || it.blocks || [];
+        if (e.parts) e.parts.forEach(function(p, i){
+          if (!parts[i] || !p) return;
+          if (p.label != null) parts[i].label = p.label;
+          if (p.text != null) parts[i].text = p.text;
+        });
+      });
+    });
+  })();
+
+  /* 可编辑区 HTML → 带反引号的纯文本（保住 code 强调） */
+  function htmlToMd(html){
+    var s = String(html == null ? "" : html);
+    s = s.replace(/<br\s*\/?>/gi, "\n");
+    s = s.replace(/<div[^>]*>/gi, "\n").replace(/<\/div>/gi, "\n");
+    s = s.replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, function(_, x){ return "`" + x + "`"; });
+    s = s.replace(/<[^>]+>/g, "");
+    var ta = document.createElement("textarea");
+    ta.innerHTML = s;
+    s = ta.value.replace(/\u00a0/g, " ").replace(/\n{3,}/g, "\n\n");
+    return s.replace(/^\s+|\s+$/g, "");
+  }
+
   function esc(s){
     return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
   }
@@ -443,23 +528,22 @@ code{
     arr.forEach(function(it,i){ it.no = i + 1; });
   }
 
-  var state = { view:"interview", kw:"", mode:"read", filter:"all" };
+  var state = { view:"interview", kw:"", mode:"read", filter:"all", edit:false };
 
   /* ================= 三色标记（已掌握 / 不熟练 / 没印象） ================= */
   var MARK_KEY = "wb_marks";
   var marks = {};
   try { marks = JSON.parse(localStorage.getItem(MARK_KEY) || "{}") || {}; } catch(e){ marks = {}; }
 
-  /* 标记按题目名存，跨栏目搬题不会丢；兼容旧的 iv| / hr| 键 */
+  /* 标记按题目名存，跨栏目搬题不会丢；兼容旧的 iv| / hr| 键；改过标题则回退到原标题 */
   function getMark(it){
-    var t = it.title;
-    return marks["q|" + t] || marks["iv|" + t] || marks["hr|" + t] || "none";
+    var t = it.title, o = it.__origTitle || t;
+    return marks["q|" + t] || marks["q|" + o] || marks["iv|" + o] || marks["hr|" + o] || "none";
   }
   function setMark(it, st){
-    var t = it.title, k = "q|" + t;
-    delete marks["iv|" + t];
-    delete marks["hr|" + t];
-    if (!st || st === "none") delete marks[k]; else marks[k] = st;
+    var t = it.title, o = it.__origTitle || t;
+    ["q|" + t, "q|" + o, "iv|" + o, "hr|" + o].forEach(function(k){ delete marks[k]; });
+    if (st && st !== "none") marks["q|" + t] = st;
     try { localStorage.setItem(MARK_KEY, JSON.stringify(marks)); } catch(e){}
   }
 
@@ -480,13 +564,14 @@ code{
   }
 
   function card(it){
+    var ed = state.edit ? ' contenteditable="true" spellcheck="false"' : '';
     var body = "";
     var parts = it.points || it.blocks || [];
     for (var i=0;i<parts.length;i++){
-      body += '<div class="pt"><span class="pt-label">' + esc(parts[i].label || "") + '</span>'
-            + '<div class="pt-text">' + rich(parts[i].text) + '</div></div>';
+      body += '<div class="pt"><span class="pt-label"' + ed + '>' + esc(parts[i].label || "") + '</span>'
+            + '<div class="pt-text"' + ed + '>' + rich(parts[i].text) + '</div></div>';
     }
-    if (it.note) body += '<div class="q-note">' + rich(it.note) + '</div>';
+    if (it.note) body += '<div class="q-note"' + ed + '>' + rich(it.note) + '</div>';
 
     var st = getMark(it);
     var mk = '<div class="marks">'
@@ -495,11 +580,11 @@ code{
       + '<button class="mk mk-green'  + (st === "green"  ? " on" : "") + '" data-st="green">已掌握</button>'
       + '</div>';
 
-    return '<article class="q" id="q-' + it.no + '" data-st="' + st + '">'
+    return '<article class="q" id="q-' + it.no + '" data-st="' + st + '" data-k="' + it.__k + '">'
          +   '<div class="q-head">'
          +     '<span class="q-dot' + (st === "none" ? "" : " " + st) + '"></span>'
          +     '<span class="q-no">' + pad(it.no) + '</span>'
-         +     '<h3 class="q-title">' + esc(it.title) + '</h3><span class="q-chev">›</span></div>'
+         +     '<h3 class="q-title"' + ed + '>' + esc(it.title) + '</h3><span class="q-chev">›</span></div>'
          +   '<div class="q-body">' + mk
          +     '<div class="ans-wrap">'
          +       '<div class="ans-mask"><span>👁 点击显示答案</span></div>'
@@ -568,9 +653,79 @@ code{
     updateStat();
     var heads = document.querySelectorAll(".q-head");
     for (var i=0;i<heads.length;i++){
-      heads[i].onclick = function(){ this.parentNode.classList.toggle("open"); };
+      heads[i].onclick = function(e){
+        /* 编辑模式下点文字是改内容，只有点箭头才折叠 */
+        if (state.edit && !(e.target && e.target.classList && e.target.classList.contains("q-chev"))) return;
+        this.parentNode.classList.toggle("open");
+      };
     }
   }
+
+  /* ================= 编辑：把改过的内容收进 localStorage ================= */
+  function itemByKey(k){
+    var vs = Object.keys(VIEWS);
+    for (var i=0;i<vs.length;i++){
+      var arr = VIEWS[vs[i]].data;
+      for (var j=0;j<arr.length;j++) if (arr[j].__k === k) return arr[j];
+    }
+    return null;
+  }
+
+  function harvest(cardEl){
+    if (!cardEl) return;
+    var it = itemByKey(cardEl.getAttribute("data-k"));
+    if (!it) return;
+    var e = edits[it.__k] || {};
+
+    var tEl = cardEl.querySelector(".q-title");
+    if (tEl){
+      var t = (tEl.innerText || "").replace(/\s+/g, " ").trim();
+      if (t){ it.title = t; e.title = t; }
+    }
+
+    var parts = it.points || it.blocks || [];
+    var ptEls = cardEl.querySelectorAll(".pt");
+    var arr = [];
+    for (var i=0;i<ptEls.length && i<parts.length;i++){
+      var lb = ptEls[i].querySelector(".pt-label");
+      var tx = ptEls[i].querySelector(".pt-text");
+      if (lb) parts[i].label = (lb.innerText || "").replace(/\n+/g, " ").trim();
+      if (tx) parts[i].text = htmlToMd(tx.innerHTML);
+      arr.push({ label: parts[i].label || "", text: parts[i].text || "" });
+    }
+    if (arr.length) e.parts = arr;
+
+    var nt = cardEl.querySelector(".q-note");
+    if (nt){ it.note = htmlToMd(nt.innerHTML); e.note = it.note; }
+
+    edits[it.__k] = e;
+    saveEdits();
+  }
+
+  var saveTimer = null;
+  document.getElementById("list").addEventListener("input", function(e){
+    if (!state.edit) return;
+    var cardEl = nearest(e.target, this, "q");
+    if (!cardEl) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function(){ harvest(cardEl); }, 350);
+  });
+
+  /* 编辑时只接纯文本，避免把网页样式粘进来 */
+  document.getElementById("list").addEventListener("paste", function(e){
+    if (!state.edit) return;
+    var el = e.target;
+    if (!el || !el.isContentEditable) return;
+    e.preventDefault();
+    var txt = ((e.clipboardData || window.clipboardData).getData("text/plain") || "");
+    document.execCommand("insertText", false, txt);
+  });
+
+  /* 标题单行：回车不换行 */
+  document.getElementById("list").addEventListener("keydown", function(e){
+    if (!state.edit) return;
+    if (e.key === "Enter" && e.target && e.target.classList.contains("q-title")) e.preventDefault();
+  });
 
   function distinct(arr, key){
     var s = {}, n = 0;
@@ -718,6 +873,46 @@ code{
   document.getElementById("collapseAll").onclick = function(){
     var qs = document.querySelectorAll(".q");
     for (var i=0;i<qs.length;i++) qs[i].classList.remove("open");
+  };
+
+  /* 编辑开关 / 导出修改 / 还原原文 */
+  var editBtn   = document.getElementById("editBtn");
+  var exportBtn = document.getElementById("exportBtn");
+  var resetBtn  = document.getElementById("resetBtn");
+  var editTip   = document.getElementById("editTip");
+
+  editBtn.onclick = function(){
+    state.edit = !state.edit;
+    document.body.classList.toggle("editing", state.edit);
+    editBtn.classList.toggle("on", state.edit);
+    editBtn.textContent = state.edit ? "✅ 完成编辑" : "✏️ 编辑";
+    exportBtn.hidden = !state.edit;
+    resetBtn.hidden  = !state.edit;
+    editTip.hidden   = !state.edit;
+    if (state.edit && state.mode === "recite") applyMode("read", true);
+    render();
+    if (state.edit){
+      var qs = document.querySelectorAll(".q");
+      for (var i=0;i<qs.length;i++) qs[i].classList.add("open");
+      window.scrollTo({top:0, behavior:"smooth"});
+    }
+  };
+
+  exportBtn.onclick = function(){
+    var payload = { exportedAt: new Date().toISOString(), edits: edits };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type:"application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "workbench-edits.json";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1200);
+  };
+
+  resetBtn.onclick = function(){
+    if (!confirm("确定还原所有本地修改？你在页面上改过的内容会全部丢掉。")) return;
+    try { localStorage.removeItem(EDIT_KEY); } catch(e){}
+    location.reload();
   };
 
   sortBy(IV, "module", MOD_ORDER);
