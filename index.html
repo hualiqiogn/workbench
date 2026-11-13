@@ -215,6 +215,35 @@ body.editing .q-note:focus{
 }
 body.editing .q-chev{cursor:pointer; opacity:.75}
 
+/* 单题编辑：按钮在答案末尾 */
+.q-tools{display:flex; justify-content:flex-end; margin-top:12px}
+.q-edit{
+  padding:5px 12px; border-radius:999px;
+  border:1px dashed #cfe0d8; background:#fbfefc; color:#4a7a63;
+  font-size:11.5px; font-weight:700; font-family:inherit; cursor:pointer;
+  transition:.15s; letter-spacing:.3px;
+}
+.q-edit:hover{border-color:#9ed8b8; background:#f2fbf6; color:var(--green-d)}
+.q-edit.on{border-style:solid; border-color:#8fbfa8; background:#eaf8f0; color:var(--green-d)}
+body.editing .q-tools{display:none}
+
+.editing-card .q-title,
+.editing-card .pt-label,
+.editing-card .pt-text,
+.editing-card .q-note{
+  outline:1px dashed #cfe0f5;
+  outline-offset:2px;
+  border-radius:4px;
+  cursor:text;
+}
+.editing-card .q-title:focus,
+.editing-card .pt-label:focus,
+.editing-card .pt-text:focus,
+.editing-card .q-note:focus{
+  outline:2px solid #8fbfe8;
+  background:#fff;
+}
+
 .mod{
   display:flex; align-items:center; gap:10px;
   margin:22px 2px 12px;
@@ -402,7 +431,7 @@ code{
         <button class="tbtn" id="resetBtn" hidden>↺ 还原原文</button>
       </div>
     </div>
-    <div class="edit-tip" id="editTip" hidden>✏️ <b>编辑模式</b>：点任意文字直接改，自动保存在本机（刷新不丢）；「⬇ 导出修改」可把改好的内容导出来。</div>
+    <div class="edit-tip" id="editTip" hidden>✏️ <b>编辑模式</b>：点题目末尾的「编辑这题」只改那一题；点顶部「编辑」可一次改全部。改完自动存本机（刷新不丢），「⬇ 导出修改」可把改动导出来。</div>
     <div class="filters" id="filters">
       <button class="fchip on" data-f="all">全部</button>
       <button class="fchip" data-f="none">未标记</button>
@@ -528,7 +557,7 @@ code{
     arr.forEach(function(it,i){ it.no = i + 1; });
   }
 
-  var state = { view:"interview", kw:"", mode:"read", filter:"all", edit:false };
+  var state = { view:"interview", kw:"", mode:"read", filter:"all", edit:false, editKey:null };
 
   /* ================= 三色标记（已掌握 / 不熟练 / 没印象） ================= */
   var MARK_KEY = "wb_marks";
@@ -564,7 +593,8 @@ code{
   }
 
   function card(it){
-    var ed = state.edit ? ' contenteditable="true" spellcheck="false"' : '';
+    var canEdit = state.edit || state.editKey === it.__k;
+    var ed = canEdit ? ' contenteditable="true" spellcheck="false"' : '';
     var body = "";
     var parts = it.points || it.blocks || [];
     for (var i=0;i<parts.length;i++){
@@ -580,7 +610,7 @@ code{
       + '<button class="mk mk-green'  + (st === "green"  ? " on" : "") + '" data-st="green">已掌握</button>'
       + '</div>';
 
-    return '<article class="q" id="q-' + it.no + '" data-st="' + st + '" data-k="' + it.__k + '">'
+    return '<article class="q' + (state.editKey === it.__k ? " editing-card" : "") + '" id="q-' + it.no + '" data-st="' + st + '" data-k="' + it.__k + '">'
          +   '<div class="q-head">'
          +     '<span class="q-dot' + (st === "none" ? "" : " " + st) + '"></span>'
          +     '<span class="q-no">' + pad(it.no) + '</span>'
@@ -590,6 +620,8 @@ code{
          +       '<div class="ans-mask"><span>👁 点击显示答案</span></div>'
          +       '<div class="ans-body">' + body + '</div>'
          +     '</div>'
+         +     '<div class="q-tools"><button class="q-edit' + (state.editKey === it.__k ? " on" : "") + '"'
+         +       ' data-k="' + it.__k + '">' + (state.editKey === it.__k ? "✅ 完成" : "✏️ 编辑这题") + '</button></div>'
          +   '</div>'
          + '</article>';
   }
@@ -654,9 +686,11 @@ code{
     var heads = document.querySelectorAll(".q-head");
     for (var i=0;i<heads.length;i++){
       heads[i].onclick = function(e){
-        /* 编辑模式下点文字是改内容，只有点箭头才折叠 */
-        if (state.edit && !(e.target && e.target.classList && e.target.classList.contains("q-chev"))) return;
-        this.parentNode.classList.toggle("open");
+        var cardEl = this.parentNode;
+        /* 编辑中：点文字是改内容，只有点箭头才折叠 */
+        if ((state.edit || cardEl.classList.contains("editing-card")) &&
+            !(e.target && e.target.classList && e.target.classList.contains("q-chev"))) return;
+        cardEl.classList.toggle("open");
       };
     }
   }
@@ -702,18 +736,56 @@ code{
     saveEdits();
   }
 
+  /* 单题就地编辑开关（不动其它题的展开状态） */
+  function setCardEditable(cardEl, on){
+    if (!cardEl) return;
+    var els = cardEl.querySelectorAll(".q-title, .pt-label, .pt-text, .q-note");
+    for (var i=0;i<els.length;i++){
+      if (on){
+        els[i].setAttribute("contenteditable", "true");
+        els[i].setAttribute("spellcheck", "false");
+      } else {
+        els[i].removeAttribute("contenteditable");
+        els[i].removeAttribute("spellcheck");
+      }
+    }
+    cardEl.classList.toggle("editing-card", !!on);
+    var b = cardEl.querySelector(".q-edit");
+    if (b){
+      b.textContent = on ? "✅ 完成" : "✏️ 编辑这题";
+      b.classList.toggle("on", !!on);
+    }
+  }
+
+  function hasEdits(){ return Object.keys(edits).length > 0; }
+
+  function refreshEditUI(){
+    var on = state.edit || !!state.editKey;
+    exportBtn.hidden = !(on || hasEdits());
+    resetBtn.hidden  = !(on || hasEdits());
+    editTip.hidden   = !on;
+    editBtn.classList.toggle("on", state.edit);
+    editBtn.textContent = state.edit ? "✅ 完成编辑" : "✏️ 编辑";
+  }
+
   var saveTimer = null;
   document.getElementById("list").addEventListener("input", function(e){
-    if (!state.edit) return;
+    if (!e.target || !e.target.isContentEditable) return;
     var cardEl = nearest(e.target, this, "q");
     if (!cardEl) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function(){ harvest(cardEl); }, 350);
   });
 
+  /* 点到别处立刻落盘，防止防抖没跑完就切栏目 */
+  document.getElementById("list").addEventListener("blur", function(e){
+    if (!e.target || !e.target.isContentEditable) return;
+    var cardEl = nearest(e.target, this, "q");
+    if (cardEl) harvest(cardEl);
+  }, true);
+
   /* 编辑时只接纯文本，避免把网页样式粘进来 */
   document.getElementById("list").addEventListener("paste", function(e){
-    if (!state.edit) return;
     var el = e.target;
     if (!el || !el.isContentEditable) return;
     e.preventDefault();
@@ -723,8 +795,8 @@ code{
 
   /* 标题单行：回车不换行 */
   document.getElementById("list").addEventListener("keydown", function(e){
-    if (!state.edit) return;
-    if (e.key === "Enter" && e.target && e.target.classList.contains("q-title")) e.preventDefault();
+    if (!e.target || !e.target.isContentEditable) return;
+    if (e.key === "Enter" && e.target.classList.contains("q-title")) e.preventDefault();
   });
 
   function distinct(arr, key){
@@ -776,6 +848,37 @@ code{
 
   document.getElementById("list").addEventListener("click", function(e){
     var root = this;
+
+    /* 单题编辑按钮：就地改这一题 */
+    var ebtn = nearest(e.target, root, "q-edit");
+    if (ebtn){
+      e.stopPropagation();
+      var cardEl = nearest(ebtn, root, "q");
+      if (!cardEl) return;
+      var k = ebtn.getAttribute("data-k");
+      if (cardEl.classList.contains("editing-card")){
+        harvest(cardEl);
+        state.editKey = null;
+        setCardEditable(cardEl, false);
+        refreshEditUI();
+      } else {
+        /* 先收起上一道正在编辑的题 */
+        if (state.editKey){
+          var prev = root.querySelector('.q[data-k="' + state.editKey + '"]');
+          if (prev){ harvest(prev); setCardEditable(prev, false); }
+        }
+        if (state.mode === "recite") applyMode("read", true);
+        state.editKey = k;
+        cardEl.classList.add("open");
+        var w = cardEl.querySelector(".ans-wrap");
+        if (w) w.classList.add("revealed");
+        setCardEditable(cardEl, true);
+        refreshEditUI();
+        var first = cardEl.querySelector(".pt-text") || cardEl.querySelector(".q-title");
+        if (first) first.scrollIntoView({ block:"center", behavior:"smooth" });
+      }
+      return;
+    }
 
     /* 点遮罩显示答案 */
     var mask = nearest(e.target, root, "ans-mask");
@@ -882,20 +985,26 @@ code{
   var editTip   = document.getElementById("editTip");
 
   editBtn.onclick = function(){
+    /* 关闭前先把在改的内容落盘 */
+    if (state.edit){
+      var cards = document.querySelectorAll(".q");
+      for (var i=0;i<cards.length;i++) harvest(cards[i]);
+    } else if (state.editKey){
+      var pc = document.querySelector('.q[data-k="' + state.editKey + '"]');
+      if (pc){ harvest(pc); setCardEditable(pc, false); }
+      state.editKey = null;
+    }
+
     state.edit = !state.edit;
     document.body.classList.toggle("editing", state.edit);
-    editBtn.classList.toggle("on", state.edit);
-    editBtn.textContent = state.edit ? "✅ 完成编辑" : "✏️ 编辑";
-    exportBtn.hidden = !state.edit;
-    resetBtn.hidden  = !state.edit;
-    editTip.hidden   = !state.edit;
     if (state.edit && state.mode === "recite") applyMode("read", true);
     render();
     if (state.edit){
       var qs = document.querySelectorAll(".q");
-      for (var i=0;i<qs.length;i++) qs[i].classList.add("open");
+      for (var j=0;j<qs.length;j++) qs[j].classList.add("open");
       window.scrollTo({top:0, behavior:"smooth"});
     }
+    refreshEditUI();
   };
 
   exportBtn.onclick = function(){
@@ -924,6 +1033,7 @@ code{
   document.getElementById("nHr").textContent = HR.length;
   document.getElementById("nBoss").textContent = BOSS.length;
   render();
+  refreshEditUI();
   applyMode((/openall/.test(location.search) && !/mode=/.test(location.search)) ? "read" : savedMode, true);
 
   if (/openall/.test(location.search)) {
