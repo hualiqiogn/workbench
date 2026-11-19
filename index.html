@@ -192,6 +192,17 @@ body{
   font-size:12.5px; font-weight:600; line-height:1.7;
 }
 .edit-tip b{color:var(--green-d)}
+/* 保存提示气泡 */
+#savedTip{
+  position:fixed; left:50%; bottom:26px; transform:translate(-50%,14px);
+  padding:9px 18px; border-radius:999px;
+  background:rgba(32,45,58,.94); color:#fff;
+  font-size:13px; font-weight:700; letter-spacing:.3px;
+  box-shadow:0 8px 22px rgba(0,0,0,.18);
+  opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease;
+  z-index:200;
+}
+#savedTip.on{opacity:1; transform:translate(-50%,0)}
 body.editing .q-title,
 body.editing .pt-label,
 body.editing .pt-text,
@@ -410,9 +421,11 @@ code{
       <button class="nav-item" data-view="project"><span class="ic">🏗️</span>项目问题<em id="nPj">0</em></button>
       <button class="nav-item" data-view="hr"><span class="ic">🤝</span>人事问题<em id="nHr">0</em></button>
       <button class="nav-item" data-view="boss"><span class="ic">💬</span>招聘回答<em id="nBoss">0</em></button>
+      <button class="nav-item" data-view="resume"><span class="ic">📄</span>简历问题<em id="nRes">0</em></button>
+      <button class="nav-item" data-view="impl"><span class="ic">🛠️</span>实施问题<em id="nImpl">0</em></button>
     </nav>
     <div class="side-sep">使用提示</div>
-    <div class="side-tip"><b>📖 阅读模式</b>：展开题目直接看答案。<br><b>🎯 背诵模式</b>：展开只显示题目，点「点击显示答案」再看全文，适合自测。<br><b>🏗️ 项目问题</b>：MES / RAG 两个项目分开放，五条亮点是三层答法。<br><b>💬 招聘回答</b>：BOSS 上的开场问题，按情况给答法。<br>点标题展开收起；小点标题红色，技术名词为行内代码。<br><b>✏️ 编辑</b>：遇到错别字点「编辑」直接改，自动保存在本机。</div>
+    <div class="side-tip"><b>📖 阅读模式</b>：展开题目直接看答案。<br><b>🎯 背诵模式</b>：展开只显示题目，点「点击显示答案」再看全文，适合自测。<br><b>🏗️ 项目问题</b>：MES / RAG 两个项目分开放，五条亮点是三层答法。<br><b>💬 招聘回答</b>：BOSS 上的开场问题，按情况给答法。<br><b>📄 简历问题</b>：面试官拿着简历问的增量点，简历上每个词都要接得住。<br><b>🛠️ 实施问题</b>：泛微实施岗方向，Q1~Q21 口语版 + 场景题。<br>点标题展开收起；小点标题红色，技术名词为行内代码。<br><b>✏️ 编辑</b>：遇到错别字点「编辑」直接改，自动保存在本机。</div>
   </aside>
 
   <main class="content">
@@ -431,7 +444,7 @@ code{
         <button class="tbtn" id="resetBtn" hidden>↺ 还原原文</button>
       </div>
     </div>
-    <div class="edit-tip" id="editTip" hidden>✏️ <b>编辑模式</b>：点题目末尾的「编辑这题」只改那一题；点顶部「编辑」可一次改全部。改完自动存本机（刷新不丢），「⬇ 导出修改」可把改动导出来。</div>
+    <div class="edit-tip" id="editTip" hidden>✏️ <b>编辑模式</b>：点题目末尾的「编辑这题」只改那一题；点顶部「编辑」可一次改全部。改完<b>自动存本机</b>（刷新不丢），也可按 <b>Ctrl+S</b> 手动存一下；「⬇ 导出修改」可把改动导出来。</div>
     <div class="filters" id="filters">
       <button class="fchip on" data-f="all">全部</button>
       <button class="fchip" data-f="none">未标记</button>
@@ -444,6 +457,7 @@ code{
     <div id="list"></div>
   </main>
 </div>
+<div id="savedTip">✅ 已保存到本机</div>
 
 <script src="data/iv1.js"></script>
 <script src="data/iv2.js"></script>
@@ -453,6 +467,8 @@ code{
 <script src="data/pj.js"></script>
 <script src="data/hr.js"></script>
 <script src="data/boss.js"></script>
+<script src="data/resume.js"></script>
+<script src="data/shishi.js"></script>
 <script>
 (function(){
   "use strict";
@@ -461,18 +477,24 @@ code{
   var PJ = window.__PJ || [];
   var HR = window.__HR || [];
   var BOSS = window.__BOSS || [];
+  var RES  = window.__RES || [];
+  var IMPL = window.__IMPL || [];
 
   var MOD_ORDER = ["Java基础","Java高级","Java集合","多线程","框架","SQL","MySQL","Redis","前端","反射","工具","Linux","场景题","SpringAI"];
   var PJ_ORDER  = ["MES 项目","RAG 项目","答题策略"];
   var HR_ORDER  = ["人事题","求职场景"];
   var BOSS_ORDER = ["BOSS 沟通"];
+  var RES_ORDER  = ["基本信息","教育经历","专业技能","数据存储","服务治理","前端开发","AI 应用","项目经历","自我评价","综合问答"];
+  var IMPL_ORDER = ["实施·先懂泛微","实施·数据库与SQL","实施·部署运维","实施·后端技术点","实施·项目业务点","实施·场景题","实施·反问环节","实施·口语背诵","实施·背诵优先级"];
 
   /* 各栏目的统一配置：key=分组字段，points=是否为「points」结构 */
   var VIEWS = {
     interview: { data: IV,   key: "module", order: MOD_ORDER,  title: "面试问题", unit: "个模块", points: true },
     project:   { data: PJ,   key: "group",  order: PJ_ORDER,   title: "项目问题", unit: "类",     points: false },
     hr:        { data: HR,   key: "group",  order: HR_ORDER,   title: "人事问题", unit: "类",     points: false },
-    boss:      { data: BOSS, key: "group",  order: BOSS_ORDER, title: "招聘回答", unit: "类",     points: false }
+    boss:      { data: BOSS, key: "group",  order: BOSS_ORDER, title: "招聘回答", unit: "类",     points: false },
+    resume:    { data: RES,  key: "group",  order: RES_ORDER,  title: "简历问题", unit: "类",     points: false },
+    impl:      { data: IMPL, key: "group",  order: IMPL_ORDER, title: "实施问题", unit: "类",     points: false }
   };
   function cur(){ return VIEWS[state.view] || VIEWS.interview; }
 
@@ -799,6 +821,38 @@ code{
     if (e.key === "Enter" && e.target.classList.contains("q-title")) e.preventDefault();
   });
 
+  /* Ctrl/Cmd + S：立刻落盘（平时 350ms 自动存，这个只是手动确认一下） */
+  var savedTip = document.getElementById("savedTip");
+  var tipTimer = null;
+  function flashSaved(){
+    if (!savedTip) return;
+    savedTip.classList.add("on");
+    clearTimeout(tipTimer);
+    tipTimer = setTimeout(function(){ savedTip.classList.remove("on"); }, 1400);
+  }
+
+  document.addEventListener("keydown", function(e){
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    if (String(e.key || "").toLowerCase() !== "s") return;
+    e.preventDefault();               /* 挡掉浏览器「另存为网页」的弹窗 */
+    var listEl = document.getElementById("list");
+    var a = document.activeElement;
+    if (a && a.isContentEditable){
+      var cardEl = nearest(a, listEl, "q");
+      if (cardEl) harvest(cardEl);
+    } else {
+      /* 没有焦点：把页面上所有处于可编辑状态的题都收一遍 */
+      var eds = document.querySelectorAll('#list [contenteditable="true"]');
+      var done = [];
+      for (var i=0;i<eds.length;i++){
+        var c = nearest(eds[i], listEl, "q");
+        if (c && done.indexOf(c) < 0){ done.push(c); harvest(c); }
+      }
+    }
+    saveEdits();
+    flashSaved();
+  });
+
   function distinct(arr, key){
     var s = {}, n = 0;
     for (var i=0;i<arr.length;i++){ var k = arr[i][key]; if (!s[k]) { s[k]=1; n++; } }
@@ -942,7 +996,7 @@ code{
   }
 
   /* 支持 ?view=project 直达某个栏目 */
-  var vm = location.search.match(/view=(interview|project|hr|boss)/);
+  var vm = location.search.match(/view=(interview|project|hr|boss|resume|impl)/);
   if (vm){
     state.view = vm[1];
     for (var vi=0;vi<navBtns.length;vi++){
@@ -1028,10 +1082,14 @@ code{
   sortBy(PJ, "group", PJ_ORDER);
   sortBy(HR, "group", HR_ORDER);
   sortBy(BOSS, "group", BOSS_ORDER);
+  sortBy(RES, "group", RES_ORDER);
+  sortBy(IMPL, "group", IMPL_ORDER);
   document.getElementById("nIv").textContent = IV.length;
   document.getElementById("nPj").textContent = PJ.length;
   document.getElementById("nHr").textContent = HR.length;
   document.getElementById("nBoss").textContent = BOSS.length;
+  document.getElementById("nRes").textContent = RES.length;
+  document.getElementById("nImpl").textContent = IMPL.length;
   render();
   refreshEditUI();
   applyMode((/openall/.test(location.search) && !/mode=/.test(location.search)) ? "read" : savedMode, true);
