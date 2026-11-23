@@ -378,6 +378,14 @@ code{
 }
 .empty{text-align:center; padding:70px 20px; color:var(--muted); font-size:14px; font-weight:600}
 
+/* 面试官可能会问：知识点讲完之后的追问区 */
+.qa-block{margin-top:16px; padding-top:13px; border-top:1px dashed #d8e3dd}
+.qa-h{font-size:12px; font-weight:800; color:var(--green-d); letter-spacing:.5px; margin-bottom:9px}
+.qa-item{margin:11px 0}
+.qa-item:last-child{margin-bottom:2px}
+.qa-q{font-size:14px; font-weight:700; color:#16261f; line-height:1.6}
+.qa-a{font-size:14px; font-weight:400; color:#3d4d45; line-height:1.72; margin-top:4px}
+
 @media (max-width:860px){
   .topbar{padding:10px 14px; gap:10px; flex-wrap:wrap}
   .brand{font-size:16px}
@@ -434,7 +442,7 @@ code{
       <button class="nav-item" data-view="impl"><span class="ic">🛠️</span>实施问题<em id="nImpl">0</em></button>
     </nav>
     <div class="side-sep">使用提示</div>
-    <div class="side-tip"><b>📖 阅读模式</b>：展开题目直接看答案。<br><b>🎯 背诵模式</b>：展开只显示题目，点「点击显示答案」再看全文，适合自测。<br><b>🏗️ 项目问题</b>：MES / RAG 两个项目分开放，五条亮点是三层答法。<br><b>💬 招聘回答</b>：BOSS 上的开场问题，按情况给答法。<br><b>📄 简历问题</b>：按简历版式三级展开——点大标题出板块，点板块出知识点，每点按 是什么/为什么/怎么做/实际应用 讲。<br><b>🛠️ 实施问题</b>：泛微实施岗方向，Q1~Q21 口语版 + 场景题。<br>点标题展开收起；小点标题红色，技术名词为行内代码。<br><b>✏️ 编辑</b>：遇到错别字点「编辑」直接改，自动保存在本机。</div>
+    <div class="side-tip"><b>📖 阅读模式</b>：展开题目直接看答案。<br><b>🎯 背诵模式</b>：展开只显示题目，点「点击显示答案」再看全文，适合自测。<br><b>🏗️ 项目问题</b>：MES / RAG 两个项目分开放，五条亮点是三层答法。<br><b>💬 招聘回答</b>：BOSS 上的开场问题，按情况给答法。<br><b>📄 简历问题</b>：点大标题展开知识点列表，点进去先看 是什么/为什么/怎么做/实际应用，再看面试官可能的追问。<br><b>🛠️ 实施问题</b>：泛微实施岗方向，Q1~Q21 口语版 + 场景题。<br>点标题展开收起；小点标题红色，技术名词为行内代码。<br><b>✏️ 编辑</b>：遇到错别字点「编辑」直接改，自动保存在本机。</div>
   </aside>
 
   <main class="content">
@@ -502,7 +510,7 @@ code{
     project:   { data: PJ,   key: "group",  order: PJ_ORDER,   title: "项目问题", unit: "类",     points: false },
     hr:        { data: HR,   key: "group",  order: HR_ORDER,   title: "人事问题", unit: "类",     points: false },
     boss:      { data: BOSS, key: "group",  order: BOSS_ORDER, title: "招聘回答", unit: "类",     points: false },
-    resume:    { data: RES,  key: "group",  order: RES_ORDER,  title: "简历问题", unit: "个分组", points: true, collapse: true, itemWord: "个板块" },
+    resume:    { data: RES,  key: "group",  order: RES_ORDER,  title: "简历问题", unit: "个分组", points: true, collapse: true, itemWord: "个知识点" },
     impl:      { data: IMPL, key: "group",  order: IMPL_ORDER, title: "实施问题", unit: "类",     points: false }
   };
   function cur(){ return VIEWS[state.view] || VIEWS.interview; }
@@ -634,6 +642,19 @@ code{
     }
     if (it.note) body += '<div class="q-note"' + ed + '>' + rich(it.note) + '</div>';
 
+    /* 面试官可能会问：先讲清知识点，再追加追问与答案 */
+    var qas = it.qa || [];
+    if (qas.length){
+      body += '<div class="qa-block"><div class="qa-h">🎤 面试官可能会问</div>';
+      for (var q=0;q<qas.length;q++){
+        body += '<div class="qa-item">'
+              +   '<div class="qa-q">Q' + (q+1) + '：' + rich(qas[q].q) + '</div>'
+              +   '<div class="qa-a">A：' + rich(qas[q].a) + '</div>'
+              + '</div>';
+      }
+      body += '</div>';
+    }
+
     var st = getMark(it);
     var mk = '<div class="marks">'
       + '<button class="mk mk-red'    + (st === "red"    ? " on" : "") + '" data-st="red">没印象</button>'
@@ -718,7 +739,7 @@ code{
     document.getElementById("vSub").textContent =
       "共 " + v.data.length + " " + (v.itemWord || "题") + " · " + distinct(v.data, v.key) + " " + v.unit;
     document.getElementById("cntHint").textContent = v.collapse
-      ? v.data.length + " 个板块 / " + distinct(v.data, v.key) + " 个分组"
+      ? v.data.length + " 个知识点 / " + distinct(v.data, v.key) + " 个分组"
       : v.points
       ? v.data.length + " 题 / " + distinct(v.data, v.key) + " 模块"
       : v.data.length + " 题";
