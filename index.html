@@ -263,6 +263,15 @@ body.editing .q-tools{display:none}
 .mod::after{content:""; flex:1; height:1px; background:linear-gradient(90deg,#d8ecdf,transparent)}
 .mod .cnt{font-size:11px;font-weight:700;color:#9fb1a7;letter-spacing:0}
 
+/* 简历问题：分组折叠（大标题 → 小标题列表 → 内容） */
+.gwrap .mod-tgl{cursor:pointer; user-select:none; padding:4px 0}
+.gwrap .mod-tgl:hover{color:#2f6b4f}
+.gwrap .mod .tw{margin-left:auto; font-size:12px; color:#9fb1a7; transition:transform .18s}
+.gwrap .mod::after{display:none}
+.gwrap.closed .mod .tw{transform:rotate(-90deg)}
+.gwrap.closed .q{display:none}
+.gwrap.closed .mod{margin-bottom:6px}
+
 .q{
   background:var(--card);
   border:1px solid var(--line);
@@ -425,7 +434,7 @@ code{
       <button class="nav-item" data-view="impl"><span class="ic">🛠️</span>实施问题<em id="nImpl">0</em></button>
     </nav>
     <div class="side-sep">使用提示</div>
-    <div class="side-tip"><b>📖 阅读模式</b>：展开题目直接看答案。<br><b>🎯 背诵模式</b>：展开只显示题目，点「点击显示答案」再看全文，适合自测。<br><b>🏗️ 项目问题</b>：MES / RAG 两个项目分开放，五条亮点是三层答法。<br><b>💬 招聘回答</b>：BOSS 上的开场问题，按情况给答法。<br><b>📄 简历问题</b>：面试官拿着简历问的增量点，简历上每个词都要接得住。<br><b>🛠️ 实施问题</b>：泛微实施岗方向，Q1~Q21 口语版 + 场景题。<br>点标题展开收起；小点标题红色，技术名词为行内代码。<br><b>✏️ 编辑</b>：遇到错别字点「编辑」直接改，自动保存在本机。</div>
+    <div class="side-tip"><b>📖 阅读模式</b>：展开题目直接看答案。<br><b>🎯 背诵模式</b>：展开只显示题目，点「点击显示答案」再看全文，适合自测。<br><b>🏗️ 项目问题</b>：MES / RAG 两个项目分开放，五条亮点是三层答法。<br><b>💬 招聘回答</b>：BOSS 上的开场问题，按情况给答法。<br><b>📄 简历问题</b>：按简历版式三级展开——点大标题出板块，点板块出知识点，每点按 是什么/为什么/怎么做/实际应用 讲。<br><b>🛠️ 实施问题</b>：泛微实施岗方向，Q1~Q21 口语版 + 场景题。<br>点标题展开收起；小点标题红色，技术名词为行内代码。<br><b>✏️ 编辑</b>：遇到错别字点「编辑」直接改，自动保存在本机。</div>
   </aside>
 
   <main class="content">
@@ -484,7 +493,7 @@ code{
   var PJ_ORDER  = ["MES 项目","RAG 项目","答题策略"];
   var HR_ORDER  = ["人事题","求职场景"];
   var BOSS_ORDER = ["BOSS 沟通"];
-  var RES_ORDER  = ["基本信息","教育经历","专业技能","数据存储","服务治理","前端开发","AI 应用","项目经历","自我评价","综合问答"];
+  var RES_ORDER  = ["教育经历","专业技能","自我评价","项目经历"];
   var IMPL_ORDER = ["实施·先懂泛微","实施·数据库与SQL","实施·部署运维","实施·后端技术点","实施·项目业务点","实施·场景题","实施·反问环节","实施·口语背诵","实施·背诵优先级"];
 
   /* 各栏目的统一配置：key=分组字段，points=是否为「points」结构 */
@@ -493,7 +502,7 @@ code{
     project:   { data: PJ,   key: "group",  order: PJ_ORDER,   title: "项目问题", unit: "类",     points: false },
     hr:        { data: HR,   key: "group",  order: HR_ORDER,   title: "人事问题", unit: "类",     points: false },
     boss:      { data: BOSS, key: "group",  order: BOSS_ORDER, title: "招聘回答", unit: "类",     points: false },
-    resume:    { data: RES,  key: "group",  order: RES_ORDER,  title: "简历问题", unit: "类",     points: false },
+    resume:    { data: RES,  key: "group",  order: RES_ORDER,  title: "简历问题", unit: "个分组", points: true, collapse: true, itemWord: "个板块" },
     impl:      { data: IMPL, key: "group",  order: IMPL_ORDER, title: "实施问题", unit: "类",     points: false }
   };
   function cur(){ return VIEWS[state.view] || VIEWS.interview; }
@@ -659,16 +668,24 @@ code{
       vis.push(it);
     }
     var html = "", grp = null, n = 0;
+    var openAll = !!(state.kw || state.filter !== "all");
     for (var i=0;i<vis.length;i++){
       var it = vis[i];
       if (it[key] !== grp){
+        if (grp !== null && v.collapse) html += '</section>';
         grp = it[key];
         n = 0;
         for (var j=0;j<vis.length;j++) if (vis[j][key] === grp) n++;
-        html += '<div class="mod">' + esc(grp) + '<span class="cnt">' + n + ' 题</span></div>';
+        if (v.collapse){
+          html += '<section class="gwrap' + (openAll ? '' : ' closed') + '">'
+                + '<div class="mod mod-tgl">' + esc(grp) + '<span class="cnt">' + n + ' 项</span><span class="tw">▾</span></div>';
+        } else {
+          html += '<div class="mod">' + esc(grp) + '<span class="cnt">' + n + ' 题</span></div>';
+        }
       }
       html += card(it);
     }
+    if (v.collapse && vis.length) html += '</section>';
     if (!vis.length) return '<div class="empty">' + (state.filter !== "all"
       ? "这个标记下还没有题，先去背几道再来"
       : "没有匹配的题目，换个关键词试试") + '</div>';
@@ -699,8 +716,10 @@ code{
     var v = cur();
     document.getElementById("vTitle").textContent = v.title;
     document.getElementById("vSub").textContent =
-      "共 " + v.data.length + " 题 · " + distinct(v.data, v.key) + " " + v.unit;
-    document.getElementById("cntHint").textContent = v.points
+      "共 " + v.data.length + " " + (v.itemWord || "题") + " · " + distinct(v.data, v.key) + " " + v.unit;
+    document.getElementById("cntHint").textContent = v.collapse
+      ? v.data.length + " 个板块 / " + distinct(v.data, v.key) + " 个分组"
+      : v.points
       ? v.data.length + " 题 / " + distinct(v.data, v.key) + " 模块"
       : v.data.length + " 题";
     document.getElementById("list").innerHTML = build();
@@ -713,6 +732,13 @@ code{
         if ((state.edit || cardEl.classList.contains("editing-card")) &&
             !(e.target && e.target.classList && e.target.classList.contains("q-chev"))) return;
         cardEl.classList.toggle("open");
+      };
+    }
+    /* 分组折叠：先看大标题，点开才出小标题列表 */
+    var tgs = document.querySelectorAll(".mod-tgl");
+    for (var t=0;t<tgs.length;t++){
+      tgs[t].onclick = function(){
+        this.parentElement.classList.toggle("closed");
       };
     }
   }
