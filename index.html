@@ -476,16 +476,16 @@ code{
 </div>
 <div id="savedTip">✅ 已保存到本机</div>
 
-<script src="data/iv1.js?v=25"></script>
-<script src="data/iv2.js?v=25"></script>
-<script src="data/iv3.js?v=25"></script>
-<script src="data/iv4.js?v=25"></script>
-<script src="data/iv5.js?v=25"></script>
-<script src="data/pj.js?v=25"></script>
-<script src="data/hr.js?v=25"></script>
-<script src="data/boss.js?v=25"></script>
-<script src="data/resume.js?v=25"></script>
-<script src="data/shishi.js?v=25"></script>
+<script src="data/iv1.js?v=26"></script>
+<script src="data/iv2.js?v=26"></script>
+<script src="data/iv3.js?v=26"></script>
+<script src="data/iv4.js?v=26"></script>
+<script src="data/iv5.js?v=26"></script>
+<script src="data/pj.js?v=26"></script>
+<script src="data/hr.js?v=26"></script>
+<script src="data/boss.js?v=26"></script>
+<script src="data/resume.js?v=26"></script>
+<script src="data/shishi.js?v=26"></script>
 <script>
 (function(){
   "use strict";
@@ -1137,6 +1137,29 @@ code{
   document.getElementById("nBoss").textContent = BOSS.length;
   document.getElementById("nRes").textContent = RES.length;
   document.getElementById("nImpl").textContent = IMPL.length;
+
+  // 缓存自愈：简历题库应为 81 条。若手机上仍读到旧缓存（如 74 条），自动清缓存并重载一次。
+  (function(){
+    try {
+      var needVer = "26";
+      var healKey = "wb_healed_" + needVer;
+      var resOk = (window.__RES || []).some(function(x){ return x.title === "向量检索的查询效率优化"; });
+      var scriptVer = (document.querySelector('script[src*="resume.js"]').getAttribute("src").match(/v=(\d+)/) || [])[1] || "";
+      if (!resOk || scriptVer !== needVer) {
+        if (!sessionStorage.getItem(healKey)) {
+          sessionStorage.setItem(healKey, "1");
+          var reset = function(){
+            if (window.caches) caches.keys().then(function(ks){ return Promise.all(ks.map(function(k){ return caches.delete(k); })); }).catch(function(){});
+            if ("serviceWorker" in navigator) navigator.serviceWorker.getRegistrations().then(function(rs){ return Promise.all(rs.map(function(r){ return r.unregister(); })); }).catch(function(){});
+            setTimeout(function(){ location.replace(location.pathname + "?heal=" + needVer + "&t=" + Date.now()); }, 400);
+          };
+          if (document.readyState === "complete") reset(); else window.addEventListener("load", reset, { once:true });
+        }
+        return;
+      }
+    } catch(e){}
+  })();
+
   render();
   refreshEditUI();
   applyMode((/openall/.test(location.search) && !/mode=/.test(location.search)) ? "read" : savedMode, true);
