@@ -476,16 +476,16 @@ code{
 </div>
 <div id="savedTip">✅ 已保存到本机</div>
 
-<script src="data/iv1.js?v=28"></script>
-<script src="data/iv2.js?v=28"></script>
-<script src="data/iv3.js?v=28"></script>
-<script src="data/iv4.js?v=28"></script>
-<script src="data/iv5.js?v=28"></script>
-<script src="data/pj.js?v=28"></script>
-<script src="data/hr.js?v=28"></script>
-<script src="data/boss.js?v=28"></script>
-<script src="data/resume.js?v=28"></script>
-<script src="data/shishi.js?v=28"></script>
+<script src="data/iv1.js?v=29"></script>
+<script src="data/iv2.js?v=29"></script>
+<script src="data/iv3.js?v=29"></script>
+<script src="data/iv4.js?v=29"></script>
+<script src="data/iv5.js?v=29"></script>
+<script src="data/pj.js?v=29"></script>
+<script src="data/hr.js?v=29"></script>
+<script src="data/boss.js?v=29"></script>
+<script src="data/resume.js?v=29"></script>
+<script src="data/shishi.js?v=29"></script>
 <script>
 (function(){
   "use strict";
@@ -521,10 +521,10 @@ code{
   try { edits = JSON.parse(localStorage.getItem(EDIT_KEY) || "{}") || {}; } catch(e){ edits = {}; }
   // v28：旧版编辑按下标存储，插入题目后会串位显示旧内容。此版本起丢弃这些不可信的旧数据。
   try {
-    if (localStorage.getItem("wb_edits_reset28") !== "1") {
+    if (localStorage.getItem("wb_edits_reset29") !== "1") {
       edits = {};
       localStorage.setItem(EDIT_KEY, "{}");
-      localStorage.setItem("wb_edits_reset28", "1");
+      localStorage.setItem("wb_edits_reset29", "1");
     }
   } catch(e){}
 
@@ -543,7 +543,7 @@ code{
         it.__origTitle = it.title;
       });
     });
-    // 2) 迁移旧的下标键数据 → 标题键（前 74 条下标已复原，可按当前题目标题找回）
+    // 2) 迁移v29：再次清理 → 标题键（前 74 条下标已复原，可按当前题目标题找回）
     var migrated = false;
     Object.keys(edits).forEach(function(k){
       var m = k.match(/^([^#]+)#(\d+)$/);
@@ -1169,7 +1169,7 @@ code{
   // 缓存自愈：简历题库应为 81 条。若手机上仍读到旧缓存（如 74 条），自动清缓存并重载一次。
   (function(){
     try {
-      var needVer = "28";
+      var needVer = "29";
       var healKey = "wb_healed_" + needVer;
       var resOk = (window.__RES || []).some(function(x){ return x.title === "向量检索的查询效率优化"; });
       var scriptVer = (document.querySelector('script[src*="resume.js"]').getAttribute("src").match(/v=(\d+)/) || [])[1] || "";
