@@ -476,16 +476,16 @@ code{
 </div>
 <div id="savedTip">✅ 已保存到本机</div>
 
-<script src="data/iv1.js?v=27"></script>
-<script src="data/iv2.js?v=27"></script>
-<script src="data/iv3.js?v=27"></script>
-<script src="data/iv4.js?v=27"></script>
-<script src="data/iv5.js?v=27"></script>
-<script src="data/pj.js?v=27"></script>
-<script src="data/hr.js?v=27"></script>
-<script src="data/boss.js?v=27"></script>
-<script src="data/resume.js?v=27"></script>
-<script src="data/shishi.js?v=27"></script>
+<script src="data/iv1.js?v=28"></script>
+<script src="data/iv2.js?v=28"></script>
+<script src="data/iv3.js?v=28"></script>
+<script src="data/iv4.js?v=28"></script>
+<script src="data/iv5.js?v=28"></script>
+<script src="data/pj.js?v=28"></script>
+<script src="data/hr.js?v=28"></script>
+<script src="data/boss.js?v=28"></script>
+<script src="data/resume.js?v=28"></script>
+<script src="data/shishi.js?v=28"></script>
 <script>
 (function(){
   "use strict";
@@ -519,22 +519,47 @@ code{
   var EDIT_KEY = "wb_edits";
   var edits = {};
   try { edits = JSON.parse(localStorage.getItem(EDIT_KEY) || "{}") || {}; } catch(e){ edits = {}; }
+  // v28：旧版编辑按下标存储，插入题目后会串位显示旧内容。此版本起丢弃这些不可信的旧数据。
+  try {
+    if (localStorage.getItem("wb_edits_reset28") !== "1") {
+      edits = {};
+      localStorage.setItem(EDIT_KEY, "{}");
+      localStorage.setItem("wb_edits_reset28", "1");
+    }
+  } catch(e){}
 
   function saveEdits(){
     try { localStorage.setItem(EDIT_KEY, JSON.stringify(edits)); } catch(e){}
   }
 
-  /* 给每题一个稳定 id（栏目#原始下标），并把本地改动合并进数据 */
+  /* 给每题一个稳定 id（栏目#原始下标，仅用于 DOM 定位），并把本地改动合并进数据。
+     编辑内容改用「栏目|原始标题」做键，插入/移动题目都不会串位。 */
   (function(){
+    // 1) 建立下标键 与 标题键 的映射
     Object.keys(VIEWS).forEach(function(v){
       VIEWS[v].data.forEach(function(it, i){
         it.__k = v + "#" + i;
+        it.__view = v;
         it.__origTitle = it.title;
       });
     });
+    // 2) 迁移旧的下标键数据 → 标题键（前 74 条下标已复原，可按当前题目标题找回）
+    var migrated = false;
+    Object.keys(edits).forEach(function(k){
+      var m = k.match(/^([^#]+)#(\d+)$/);
+      if (!m) return;
+      var v = m[1], idx = parseInt(m[2], 10);
+      var arr = VIEWS[v] && VIEWS[v].data;
+      if (!arr || !arr[idx]) return;
+      var newKey = v + "|" + arr[idx].__origTitle;
+      if (!edits[newKey]) { edits[newKey] = edits[k]; migrated = true; }
+      delete edits[k];
+    });
+    if (migrated) saveEdits();
+    // 3) 按标题键合并进数据
     Object.keys(VIEWS).forEach(function(v){
       VIEWS[v].data.forEach(function(it){
-        var e = edits[it.__k];
+        var e = edits[v + "|" + it.__origTitle];
         if (!e) return;
         if (e.title) it.title = e.title;
         if (e.note) it.note = e.note;
@@ -774,11 +799,14 @@ code{
     return null;
   }
 
+  /* 编辑存储键：栏目|原始标题（稳定，不随下标/插入变化） */
+  function editKey(it){ return it.__view + "|" + it.__origTitle; }
+
   function harvest(cardEl){
     if (!cardEl) return;
     var it = itemByKey(cardEl.getAttribute("data-k"));
     if (!it) return;
-    var e = edits[it.__k] || {};
+    var e = edits[editKey(it)] || {};
 
     var tEl = cardEl.querySelector(".q-title");
     if (tEl){
@@ -801,7 +829,7 @@ code{
     var nt = cardEl.querySelector(".q-note");
     if (nt){ it.note = htmlToMd(nt.innerHTML); e.note = it.note; }
 
-    edits[it.__k] = e;
+    edits[editKey(it)] = e;
     saveEdits();
   }
 
@@ -831,7 +859,7 @@ code{
   function refreshEditUI(){
     var on = state.edit || !!state.editKey;
     exportBtn.hidden = !(on || hasEdits());
-    resetBtn.hidden  = !(on || hasEdits());
+    resetBtn.hidden  = false;  /* 还原原文始终可用，方便手动清掉本机旧编辑 */
     editTip.hidden   = !on;
     editBtn.classList.toggle("on", state.edit);
     editBtn.textContent = state.edit ? "✅ 完成编辑" : "✏️ 编辑";
@@ -1141,7 +1169,7 @@ code{
   // 缓存自愈：简历题库应为 81 条。若手机上仍读到旧缓存（如 74 条），自动清缓存并重载一次。
   (function(){
     try {
-      var needVer = "27";
+      var needVer = "28";
       var healKey = "wb_healed_" + needVer;
       var resOk = (window.__RES || []).some(function(x){ return x.title === "向量检索的查询效率优化"; });
       var scriptVer = (document.querySelector('script[src*="resume.js"]').getAttribute("src").match(/v=(\d+)/) || [])[1] || "";
