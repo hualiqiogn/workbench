@@ -2,7 +2,7 @@
   "name": "大帅比工作台",
   "short_name": "工作台",
   "description": "面试问题 + 人事问题，随时背",
-  "start_url": "./index.html",
+  "start_url": "./go.html",
   "display": "standalone",
   "background_color": "#f6fbf8",
   "theme_color": "#2f9e68",
