@@ -1,7 +1,8 @@
-const CACHE = 'workbench-v30';
+const CACHE = 'workbench-v31';
 const ASSETS = [
   './',
   './index.html',
+  './go.html',
   './data/iv1.js',
   './data/iv2.js',
   './data/iv3.js',
