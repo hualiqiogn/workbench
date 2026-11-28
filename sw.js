@@ -1,4 +1,4 @@
-const CACHE = 'workbench-v31';
+const CACHE = 'workbench-v32';
 const ASSETS = [
   './',
   './index.html',
@@ -13,6 +13,7 @@ const ASSETS = [
   './data/boss.js',
   './data/resume.js',
   './data/shishi.js',
+  './data/agent.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png'
