@@ -1,4 +1,4 @@
-const CACHE = 'workbench-v32';
+const CACHE = 'workbench-v34';
 const ASSETS = [
   './',
   './index.html',
@@ -26,9 +26,18 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then(list => Promise.all(list.map(c => {
+        try {
+          var u = new URL(c.url);
+          u.searchParams.set('__swup', Date.now().toString());
+          return c.navigate(u.href).catch(() => {});
+        } catch (err) { return Promise.resolve(); }
+      })))
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', e => {
