@@ -5,7 +5,8 @@ rem then opens the app in an Edge app window (no address bar).
 
 set PORT=8899
 set APPDIR=D:\LI\interview-app
-set URL=http://localhost:%PORT%/index.html
+rem 每次打开都带随机参数，绕过 Edge 里旧 Service Worker 的缓存，避免看到旧页面
+set URL=http://localhost:%PORT%/index.html?fresh=%RANDOM%%RANDOM%
 set EDGE=C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
 set PY=D:\python\python.exe
 
