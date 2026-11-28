@@ -14,9 +14,9 @@ echo   面试背诵 - 手机访问（同一 Wi-Fi / 手机热点下使用）
 echo ============================================
 echo.
 if defined LANIP (
-  echo   手机浏览器打开这个地址：
+  echo   手机浏览器打开这个地址（每次带随机参数，绕过旧缓存）：
   echo.
-  echo       http://%LANIP%:%PORT%/index.html
+  echo       http://%LANIP%:%PORT%/index.html?fresh=%RANDOM%%RANDOM%
 ) else (
   echo   没探测到本机 IP，请用 ipconfig 自己看一眼无线网卡地址。
 )
