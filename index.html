@@ -440,9 +440,10 @@ code{
       <button class="nav-item" data-view="boss"><span class="ic">💬</span>招聘回答<em id="nBoss">0</em></button>
       <button class="nav-item" data-view="resume"><span class="ic">📄</span>简历问题<em id="nRes">0</em></button>
       <button class="nav-item" data-view="impl"><span class="ic">🛠️</span>实施问题<em id="nImpl">0</em></button>
+      <button class="nav-item" data-view="agent"><span class="ic">🤖</span>Agent<em id="nAgent">0</em></button>
     </nav>
     <div class="side-sep">使用提示</div>
-    <div class="side-tip"><b>📖 阅读模式</b>：展开题目直接看答案。<br><b>🎯 背诵模式</b>：展开只显示题目，点「点击显示答案」再看全文，适合自测。<br><b>🏗️ 项目问题</b>：MES / RAG 两个项目分开放，五条亮点是三层答法。<br><b>💬 招聘回答</b>：BOSS 上的开场问题，按情况给答法。<br><b>📄 简历问题</b>：点大标题展开知识点列表，点进去先看 是什么/为什么/怎么做/实际应用，再看面试官可能的追问。<br><b>🛠️ 实施问题</b>：泛微实施岗方向，Q1~Q21 口语版 + 场景题。<br>点标题展开收起；小点标题红色，技术名词为行内代码。<br><b>✏️ 编辑</b>：遇到错别字点「编辑」直接改，自动保存在本机。</div>
+    <div class="side-tip"><b>📖 阅读模式</b>：展开题目直接看答案。<br><b>🎯 背诵模式</b>：展开只显示题目，点「点击显示答案」再看全文，适合自测。<br><b>🏗️ 项目问题</b>：MES / RAG 两个项目分开放，五条亮点是三层答法。<br><b>💬 招聘回答</b>：BOSS 上的开场问题，按情况给答法。<br><b>📄 简历问题</b>：点大标题展开知识点列表，点进去先看 是什么/为什么/怎么做/实际应用，再看面试官可能的追问。<br><b>🛠️ 实施问题</b>：泛微实施岗方向，Q1~Q21 口语版 + 场景题。<br><b>🤖 Agent</b>：Agent 五大模块（架构机制 / 工程优化 / 框架前沿 / 场景落地 / AI 协作），考点 + 推荐话术。<br>点标题展开收起；小点标题红色，技术名词为行内代码。<br><b>✏️ 编辑</b>：遇到错别字点「编辑」直接改，自动保存在本机。</div>
   </aside>
 
   <main class="content">
@@ -486,6 +487,7 @@ code{
 <script src="data/boss.js?v=30"></script>
 <script src="data/resume.js?v=30"></script>
 <script src="data/shishi.js?v=30"></script>
+<script src="data/agent.js?v=30"></script>
 <script>
 (function(){
   "use strict";
@@ -496,6 +498,7 @@ code{
   var BOSS = window.__BOSS || [];
   var RES  = window.__RES || [];
   var IMPL = window.__IMPL || [];
+  var AGENT = window.__AGENT || [];
 
   var MOD_ORDER = ["Java基础","Java高级","Java集合","多线程","框架","SQL","MySQL","Redis","前端","反射","工具","Linux","场景题","SpringAI"];
   var PJ_ORDER  = ["MES 项目","RAG 项目","答题策略"];
@@ -503,6 +506,7 @@ code{
   var BOSS_ORDER = ["BOSS 沟通"];
   var RES_ORDER  = ["教育经历","专业技能","自我评价","项目经历","软性问题"];
   var IMPL_ORDER = ["实施·先懂泛微","实施·数据库与SQL","实施·部署运维","实施·后端技术点","实施·项目业务点","实施·场景题","实施·反问环节","实施·口语背诵","实施·背诵优先级"];
+  var AGENT_ORDER = ["模块一：Agent 核心架构与机制","模块二：工程化与性能优化","模块三：框架与前沿技术","模块四：场景落地与 RAG 结合","模块五：AI 辅助开发与团队协作"];
 
   /* 各栏目的统一配置：key=分组字段，points=是否为「points」结构 */
   var VIEWS = {
@@ -511,7 +515,8 @@ code{
     hr:        { data: HR,   key: "group",  order: HR_ORDER,   title: "人事问题", unit: "类",     points: false },
     boss:      { data: BOSS, key: "group",  order: BOSS_ORDER, title: "招聘回答", unit: "类",     points: false },
     resume:    { data: RES,  key: "group",  order: RES_ORDER,  title: "简历问题", unit: "个分组", points: true, collapse: true, itemWord: "个知识点" },
-    impl:      { data: IMPL, key: "group",  order: IMPL_ORDER, title: "实施问题", unit: "类",     points: false }
+    impl:      { data: IMPL, key: "group",  order: IMPL_ORDER, title: "实施问题", unit: "类",     points: false },
+    agent:     { data: AGENT, key: "group", order: AGENT_ORDER, title: "Agent",   unit: "个模块", points: false }
   };
   function cur(){ return VIEWS[state.view] || VIEWS.interview; }
 
@@ -1071,7 +1076,7 @@ code{
   }
 
   /* 支持 ?view=project 直达某个栏目 */
-  var vm = location.search.match(/view=(interview|project|hr|boss|resume|impl)/);
+  var vm = location.search.match(/view=(interview|project|hr|boss|resume|impl|agent)/);
   if (vm){
     state.view = vm[1];
     for (var vi=0;vi<navBtns.length;vi++){
@@ -1159,12 +1164,14 @@ code{
   sortBy(BOSS, "group", BOSS_ORDER);
   sortBy(RES, "group", RES_ORDER);
   sortBy(IMPL, "group", IMPL_ORDER);
+  sortBy(AGENT, "group", AGENT_ORDER);
   document.getElementById("nIv").textContent = IV.length;
   document.getElementById("nPj").textContent = PJ.length;
   document.getElementById("nHr").textContent = HR.length;
   document.getElementById("nBoss").textContent = BOSS.length;
   document.getElementById("nRes").textContent = RES.length;
   document.getElementById("nImpl").textContent = IMPL.length;
+  document.getElementById("nAgent").textContent = AGENT.length;
 
   // 缓存自愈：简历题库应为 81 条。若手机上仍读到旧缓存（如 74 条），自动清缓存并重载一次。
   (function(){
